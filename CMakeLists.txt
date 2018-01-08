@@ -362,5 +362,5 @@ add_subdirectory(tools)
 
 ### TESTS:
 
-add_subdirectory(LiteCore/tests)
-add_subdirectory(C/tests)
+#add_subdirectory(LiteCore/tests)
+#add_subdirectory(C/tests)
