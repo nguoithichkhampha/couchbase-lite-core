@@ -368,8 +368,8 @@ namespace litecore {
                     _sql << " AS \"" << _aliases[i] << "\"";
                 } else {
                     require(on, "FROM item needs an ON clause to be a join");
-                    if (i > 1)
-                        _sql << ",";
+                    // if (i > 1)
+                    //     _sql << ",";
                     auto joinType = getCaseInsensitive(entry, "JOIN"_sl);
                     if (joinType) {
                         auto typeStr = requiredString(joinType, "JOIN value").asString();
