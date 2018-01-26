@@ -215,8 +215,8 @@ set(ALL_SRC_FILES
   ${REPLICATOR_SRC}) 
 
 if(MSVC)
-	include_directories("vendor/fleece/MSVC")
-	set(ALL_SRC_FILES ${ALL_SRC_FILES} 
+    include_directories("vendor/fleece/MSVC")
+    set(ALL_SRC_FILES ${ALL_SRC_FILES} 
     MSVC/asprintf.c
     vendor/fleece/MSVC/memmem.cc 
     MSVC/mkstemp.cc 
@@ -247,60 +247,60 @@ endif()
 
 add_library(LiteCoreStatic STATIC ${ALL_SRC_FILES})
 target_compile_definitions(LiteCoreStatic PRIVATE -DLITECORE_IMPL)
-if(WIN32)
-    add_library(LiteCore SHARED MSVC/SQLiteTempDirectory.cc) #No-op for non-UWP
-else()
-    file(WRITE empty.cpp)
-    add_library(LiteCore SHARED empty.cpp)
-endif()
+#if(WIN32)
+#    add_library(LiteCore SHARED MSVC/SQLiteTempDirectory.cc) #No-op for non-UWP
+#else()
+#    file(WRITE empty.cpp)
+#    add_library(LiteCore SHARED empty.cpp)
+#endif()
 
 
-install (TARGETS LiteCore
-         RUNTIME DESTINATION bin
-         LIBRARY DESTINATION lib)
+#install (TARGETS LiteCore
+#         RUNTIME DESTINATION bin
+#         LIBRARY DESTINATION lib)
 
 if(UNIX AND NOT APPLE)
     set(WHOLE_LIBRARY_FLAG "-Wl,--whole-archive")
     set(NO_WHOLE_LIBRARY_FLAG "-Wl,--no-whole-archive")
 endif()
 
-set(LITECORE_LIBRARIES_PRIVATE  ${WHOLE_LIBRARY_FLAG}
-                                LiteCoreStatic
-                                FleeceStatic
-                                ${NO_WHOLE_LIBRARY_FLAG}
-                                SQLite3_UnicodeSN
-                                BLIPStatic
-                                CivetWeb
-                                sqlcipher
-                                mbedcrypto)
+#set(LITECORE_LIBRARIES_PRIVATE  ${WHOLE_LIBRARY_FLAG}
+#                                LiteCoreStatic
+#                                FleeceStatic
+#                                ${NO_WHOLE_LIBRARY_FLAG}
+#                                SQLite3_UnicodeSN
+#                                BLIPStatic
+#                                CivetWeb
+#                                sqlcipher
+#                                mbedcrypto)
 
-target_link_libraries(LiteCore PRIVATE ${LITECORE_LIBRARIES_PRIVATE})
+#target_link_libraries(LiteCore PRIVATE ${LITECORE_LIBRARIES_PRIVATE})
 
 # Mac/iOS stuff
 if (APPLE)
-    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
-                          "-exported_symbols_list ${PROJECT_SOURCE_DIR}/C/c4.exp")
-    target_link_libraries(LiteCore PUBLIC  "-framework CoreFoundation"
-                                    "-framework Foundation"
-                                    "-framework CFNetwork"
-                                    "-framework Security"
-                                    z)
+#    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
+#                          "-exported_symbols_list ${PROJECT_SOURCE_DIR}/C/c4.exp")
+#    target_link_libraries(LiteCore PUBLIC  "-framework CoreFoundation"
+#                                    "-framework Foundation"
+#                                    "-framework CFNetwork"
+#                                    "-framework Security"
+#                                    z)
 elseif(UNIX AND NOT ANDROID)
-    target_link_libraries(LiteCore PUBLIC z ${ICU4C_COMMON} ${ICU4C_I18N})
+#    target_link_libraries(LiteCore PUBLIC z ${ICU4C_COMMON} ${ICU4C_I18N})
 elseif(ANDROID)
    target_compile_definitions(LiteCoreStatic PUBLIC -D_CRYPTO_MBEDTLS)
-    target_link_libraries(LiteCore PRIVATE "atomic" "log")
+#    target_link_libraries(LiteCore PRIVATE "atomic" "log")
     target_link_libraries(LiteCore PUBLIC z)
 else()
     target_compile_definitions(LiteCoreStatic PUBLIC -DUNICODE -D_UNICODE -D_CRYPTO_MBEDTLS -D_USE_MATH_DEFINES -DLITECORE_EXPORTS -DWIN32)
     if(WINDOWS_STORE)
         target_compile_definitions(LiteCoreStatic PUBLIC -DMBEDTLS_NO_PLATFORM_ENTROPY)
-        set_target_properties(LiteCore PROPERTIES COMPILE_FLAGS /ZW)
+#        set_target_properties(LiteCore PROPERTIES COMPILE_FLAGS /ZW)
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nodefaultlib:kernel32.lib /nodefaultlib:ole32.lib")
     endif()
-    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
-			  "/def:${PROJECT_SOURCE_DIR}/C/c4.def")
-    target_link_libraries(LiteCore PRIVATE zlibstatic Ws2_32 Dbghelp.lib)
+#    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
+#             "/def:${PROJECT_SOURCE_DIR}/C/c4.def")
+#   target_link_libraries(LiteCore PRIVATE zlibstatic Ws2_32 Dbghelp.lib)
 endif()
 
 ### JNI:
@@ -311,26 +311,26 @@ endif()
 
 ### REST LISTENER LIBRARY:
 
-add_library(LiteCoreREST SHARED LiteCore/Support/Error.cc
-                                LiteCore/Support/Error_android.cc
-                                LiteCore/Support/Error_windows.cc
-                                LiteCore/Support/FilePath.cc
-                                LiteCore/Support/Logging_Stub.cc
-                                LiteCore/Support/StringUtil.cc
-                                LiteCore/Support/RefCounted.cc
-                                C/c4ExceptionUtils.cc)
-target_link_libraries(LiteCoreREST PRIVATE ${WHOLE_LIBRARY_FLAG} LiteCoreREST_Static ${NO_WHOLE_LIBRARY_FLAG} LiteCore FleeceStatic)
+#add_library(LiteCoreREST SHARED LiteCore/Support/Error.cc
+#                                LiteCore/Support/Error_android.cc
+#                                LiteCore/Support/Error_windows.cc
+#                                LiteCore/Support/FilePath.cc
+#                                LiteCore/Support/Logging_Stub.cc
+#                                LiteCore/Support/StringUtil.cc
+#                                LiteCore/Support/RefCounted.cc
+#                                C/c4ExceptionUtils.cc)
+#target_link_libraries(LiteCoreREST PRIVATE ${WHOLE_LIBRARY_FLAG} LiteCoreREST_Static ${NO_WHOLE_LIBRARY_FLAG} LiteCore FleeceStatic)
 
-if (APPLE)
-    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
-                          "-exported_symbols_list ${PROJECT_SOURCE_DIR}/REST/c4REST.exp")
-elseif(MSVC)
-    target_link_libraries(LiteCoreREST PUBLIC Dbghelp.lib)
-    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
-              "/def:${PROJECT_SOURCE_DIR}/REST/c4REST.def")
-elseif(ANDROID)
-    target_link_libraries(LiteCoreREST PRIVATE "atomic" "log")
-endif()
+#if (APPLE)
+#    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
+#                          "-exported_symbols_list ${PROJECT_SOURCE_DIR}/REST/c4REST.exp")
+#elseif(MSVC)
+#    target_link_libraries(LiteCoreREST PUBLIC Dbghelp.lib)
+#    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
+#              "/def:${PROJECT_SOURCE_DIR}/REST/c4REST.def")
+#elseif(ANDROID)
+#    target_link_libraries(LiteCoreREST PRIVATE "atomic" "log")
+#endif()
 
 ### LITECORESERV:
 
@@ -358,7 +358,7 @@ endif()
 
 ### TOOLS:
 
-add_subdirectory(tools)
+#add_subdirectory(tools)
 
 ### TESTS:
 
