@@ -1,9 +1,19 @@
 //
-//  Worker.hh
-//  LiteCore
+// Worker.hh
 //
-//  Created by Jens Alfke on 2/20/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -69,8 +79,9 @@ namespace litecore { namespace repl {
             fleeceapi::Dict filterParams() const
                                       {return properties[kC4ReplicatorOptionFilterParams].asDict();}
             bool skipDeleted() const  {return properties[kC4ReplicatorOptionSkipDeleted].asBool();}
-            bool noConflicts() const  {return properties[kC4ReplicatorOptionNoConflicts].asBool();}
-            
+            bool noIncomingConflicts() const  {return properties[kC4ReplicatorOptionNoIncomingConflicts].asBool();}
+            bool noOutgoingConflicts() const  {return properties[kC4ReplicatorOptionNoIncomingConflicts].asBool();}
+
             fleeceapi::Array arrayProperty(const char *name) const {
                 return properties[name].asArray();
             }
@@ -82,7 +93,7 @@ namespace litecore { namespace repl {
                 Warning: This rewrites the backing store of the properties, invalidating any
                 Fleece value pointers or slices previously accessed from it. */
             template <class T>
-            void setProperty(fleece::slice name, T value) {
+            Options& setProperty(fleece::slice name, T value) {
                 fleeceapi::Encoder enc;
                 enc.beginDict();
                 if (value) {
@@ -98,8 +109,14 @@ namespace litecore { namespace repl {
                 }
                 enc.endDict();
                 properties = fleeceapi::AllocedDict(enc.finish());
+                return *this;
             }
 
+            Options& setNoIncomingConflicts() {
+                return setProperty(C4STR(kC4ReplicatorOptionNoIncomingConflicts), true);
+            }
+
+            explicit operator std::string() const;
         };
 
         

@@ -1,9 +1,19 @@
 //
-//  c4Document+Fleece.h
-//  LiteCore
+// c4Document+Fleece.h
 //
-//  Created by Jens Alfke on 10/25/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -81,7 +91,10 @@ extern "C" {
     FLSharedKeys c4db_getFLSharedKeys(C4Database *db C4NONNULL) C4API;
 
     /** Returns an initialized FLDictKey for the given key string, taking into account the shared
-        keys of the given database. */
+        keys of the given database.
+
+        Warning: the input string's memory MUST remain valid for as long as the FLDictKey is in
+        use! (The FLDictKey stores a pointer to the string, but does not copy it.) */
     FLDictKey c4db_initFLDictKey(C4Database *db C4NONNULL, C4String string) C4API;
 
     /** @} */

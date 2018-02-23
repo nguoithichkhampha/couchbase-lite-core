@@ -1,17 +1,20 @@
 //
-//  c4Base.cc
-//  Couchbase Lite Core
+// c4Base.cc
 //
-//  Created by Jens Alfke on 8/1/16.
-//  Copyright (c) 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "c4Internal.hh"
 #include "c4Database.h"
@@ -56,7 +59,7 @@ static string getBuildInfo() {
 #if LiteCoreOfficial
     return format("build number %s from commit %.8s", LiteCoreBuildNum, GitCommit);
 #else
-    if (strcmp(GitBranch, "HEAD") == 0)
+    if (strcmp(GitBranch, "HEAD") == (0))
         return format("built from commit %.8s%s on %s %s",
                       GitCommit, GitDirty, __DATE__, __TIME__);
     else
@@ -68,6 +71,20 @@ static string getBuildInfo() {
 
 C4StringResult c4_getBuildInfo() C4API {
     return sliceResult(getBuildInfo());
+}
+
+
+C4StringResult c4_getVersion() C4API {
+    string vers;
+#if LiteCoreOfficial
+    vers = LiteCoreBuildNum;
+#else
+    if (strcmp(GitBranch, "master") == (0) || strcmp(GitBranch, "HEAD") == (0))
+        vers = format("%.8s%.1s", GitCommit, GitDirty);
+    else
+        vers = format("%s:%.8s%.1s", GitBranch, GitCommit, GitDirty);
+#endif
+    return sliceResult(vers);
 }
 // LCOV_EXCL_STOP
 
@@ -267,7 +284,8 @@ namespace c4Internal {
 
 // LCOV_EXCL_START
 void c4log_writeToCallback(C4LogLevel level, C4LogCallback callback, bool preformatted) noexcept {
-    LogDomain::setCallback((LogDomain::Callback_t)callback, preformatted, (LogLevel)level);
+    LogDomain::setCallback((LogDomain::Callback_t)callback, preformatted);
+    LogDomain::setCallbackLogLevel((LogLevel)level);
 }
 // LCOV_EXCL_STOP
 
@@ -353,7 +371,7 @@ void c4slog(C4LogDomain c4Domain, C4LogLevel level, C4Slice msg) noexcept {
 
 
 int c4_getObjectCount() noexcept {
-    return gC4InstanceCount;
+    return gC4InstanceCount + websocket::WebSocket::gInstanceCount;
 }
 
 // LCOV_EXCL_START

@@ -1,9 +1,19 @@
 //
-//  c4Query.h
-//  LiteCore
+// c4Query.h
 //
-//  Created by Jens Alfke on 10/5/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -85,6 +95,11 @@ extern "C" {
         /** The columns of this result, in the same order as in the query's `WHAT` clause. */
         FLArrayIterator columns;
 
+        /** A bitmap where a 1 bit represents a column whose value is MISSING.
+            This is how you tell a missing property value from a value that's JSON 'null',
+            since the value in the `columns` array will be a Fleece `null` either way. */
+        uint64_t missingColumns;
+
         /** The number of full-text matches (i.e. the number of items in `fullTextMatches`) */
         uint32_t fullTextMatchCount;
 
@@ -148,7 +163,7 @@ extern "C" {
 
     /** Closes an enumerator without freeing it. This is optional, but can be used to free up
         resources if the enumeration has not reached its end, but will not be freed for a while. */
-    void c4queryenum_close(C4QueryEnumerator *e C4NONNULL) C4API;
+    void c4queryenum_close(C4QueryEnumerator *e) C4API;
 
     /** Frees a query enumerator. */
     void c4queryenum_free(C4QueryEnumerator *e) C4API;

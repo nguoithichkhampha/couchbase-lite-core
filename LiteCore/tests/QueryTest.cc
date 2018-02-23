@@ -1,9 +1,19 @@
 //
-//  QueryTest.cc
-//  LiteCore
+// QueryTest.cc
 //
-//  Created by Jens Alfke on 5/13/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "DataFile.hh"
@@ -480,6 +490,15 @@ TEST_CASE_METHOD(DataFileTestFixture, "Query missing and null", "[Query]") {
     REQUIRE(e->getRowCount() == 1);
     REQUIRE(e->next());
     REQUIRE(e->columns()[0]->asString() == "doc1"_sl);
+
+    query =store->compileQuery(json5(
+        "{'WHAT': ['._id'], WHERE: ['=', ['IFMISSINGORNULL()', ['.real_value'], ['.atai']], 1]}"));
+    e.reset(query->createEnumerator());
+    REQUIRE(e->getRowCount() == 2);
+    REQUIRE(e->next());
+    REQUIRE(e->columns()[0]->asString() == "doc1"_sl);
+    REQUIRE(e->next());
+    REQUIRE(e->columns()[0]->asString() == "doc2"_sl);
 }
 
 TEST_CASE_METHOD(DataFileTestFixture, "Query regex", "[Query]") {
@@ -868,8 +887,7 @@ TEST_CASE_METHOD(DataFileTestFixture, "Query unsigned", "[Query]") {
 
 }
 
-// Failing test below
-#if 0
+// Test for #341, "kData fleece type unable to be queried"
 TEST_CASE_METHOD(DataFileTestFixture, "Query data type", "[Query]") {
      {
         Transaction t(store->dataFile());
@@ -900,5 +918,176 @@ TEST_CASE_METHOD(DataFileTestFixture, "Query data type", "[Query]") {
     REQUIRE(e->getRowCount() == 1);
     REQUIRE(e->next());
     CHECK(e->columns()[0]->asString() == "binary"_sl);
+}
+
+
+TEST_CASE_METHOD(DataFileTestFixture, "Missing columns", "[Query]") {
+    {
+        Transaction t(store->dataFile());
+        string docID = "rec-001";
+
+        fleece::Encoder enc;
+        enc.beginDictionary();
+        enc.writeKey("num");
+        enc.writeInt(1234);
+        enc.writeKey("string");
+        enc.writeString("FOO");
+        enc.endDictionary();
+        alloc_slice body = enc.extractOutput();
+
+        store->set(slice(docID), nullslice, body, DocumentFlags::kNone, t);
+
+        t.commit();
+    }
+
+    auto query = store->compileQuery(json5(
+        "{'WHAT': ['.num', '.string']}"));
+    unique_ptr<QueryEnumerator> e(query->createEnumerator());
+    REQUIRE(e->next());
+    CHECK(e->missingColumns() == 0);
+    CHECK(e->columns()[0]->toJSONString() == "1234");
+    CHECK(e->columns()[1]->toJSONString() == "\"FOO\"");
+
+    query = store->compileQuery(json5(
+        "{'WHAT': ['.bogus', '.num', '.nope', '.string', '.gone']}"));
+    e.reset(query->createEnumerator());
+    REQUIRE(e->next());
+    CHECK(e->missingColumns() == 0x15);       // binary 10101, i.e. cols 0, 2, 4 are missing
+    CHECK(e->columns()[1]->toJSONString() == "1234");
+    CHECK(e->columns()[3]->toJSONString() == "\"FOO\"");
+}
+
+TEST_CASE_METHOD(DataFileTestFixture, "Negative Limit / Offset", "[Query]") {
+    {
+        Transaction t(store->dataFile());
+        string docID = "rec-001";
+
+        fleece::Encoder enc;
+        enc.beginDictionary();
+        enc.writeKey("num");
+        enc.writeInt(1234);
+        enc.writeKey("string");
+        enc.writeString("FOO");
+        enc.endDictionary();
+        alloc_slice body = enc.extractOutput();
+
+        store->set(slice(docID), nullslice, body, DocumentFlags::kNone, t);
+
+        t.commit();
+    }
+
+    auto query = store->compileQuery(json5(
+        "{'WHAT': ['.num', '.string'], 'LIMIT': -1}"));
+    unique_ptr<QueryEnumerator> e(query->createEnumerator());
+    CHECK(e->getRowCount() == 0);
+
+    query = store->compileQuery(json5(
+        "{'WHAT': ['.num', '.string'], 'LIMIT': 100, 'OFFSET': -1}"));
+    e.reset(query->createEnumerator());
+    CHECK(e->getRowCount() == 1);
+    REQUIRE(e->next());
+    CHECK(e->columns()[0]->toJSONString() == "1234");
+    CHECK(e->columns()[1]->toJSONString() == "\"FOO\"");
+
+    Query::Options opts;
+    opts.paramBindings = R"({"lim": -1})"_sl;
+    query = store->compileQuery(json5(
+        "{'WHAT': ['.num', '.string'], 'LIMIT': ['$lim']}"));
+    e.reset(query->createEnumerator(&opts));
+    CHECK(e->getRowCount() == 0);
+
+    opts.paramBindings = R"({"lim": 100, "skip": -1})"_sl;
+    query = store->compileQuery(json5(
+        "{'WHAT': ['.num', '.string'], 'LIMIT': ['$lim'], 'OFFSET': ['$skip']}"));
+    e.reset(query->createEnumerator(&opts));
+    CHECK(e->getRowCount() == 1);
+    REQUIRE(e->next());
+    CHECK(e->columns()[0]->toJSONString() == "1234");
+    CHECK(e->columns()[1]->toJSONString() == "\"FOO\"");
+}
+
+TEST_CASE_METHOD(DataFileTestFixture, "Query JOINs", "[Query]") {
+     {
+        Transaction t(store->dataFile());
+        string docID = "rec-00";
+
+        for(int i = 0; i < 10; i++) {
+            stringstream ss(docID);
+            ss << i + 1;
+
+            fleece::Encoder enc;
+            enc.beginDictionary();
+            enc.writeKey("num1");
+            enc.writeInt(i);
+            enc.writeKey("num2");
+            enc.writeInt(10 - i);
+            enc.endDictionary();
+            alloc_slice body = enc.extractOutput();
+
+            store->set(slice(ss.str()), nullslice, body, DocumentFlags::kNone, t);
+        }
+
+        fleece::Encoder enc;
+        enc.beginDictionary();
+        enc.writeKey("theone");
+        enc.writeInt(4);
+        enc.endDictionary();
+        alloc_slice body = enc.extractOutput();
+
+        store->set("magic"_sl, nullslice, body, DocumentFlags::kNone, t);
+
+        t.commit();
+    }
+
+    auto query = store->compileQuery(json5(
+        "{'WHAT': [['.main.num1']], 'FROM': [{'AS':'main'}, {'AS':'secondary', 'ON': ['=', ['.main.num1'], ['.secondary.theone']]}]}"));
+    unique_ptr<QueryEnumerator> e(query->createEnumerator());
+    REQUIRE(e->getRowCount() == 1);
+    REQUIRE(e->next());
+    CHECK(e->columns()[0]->asInt() == 4);
+
+    query = store->compileQuery(json5(
+        "{'WHAT': [['.main.num1'], ['.secondary.theone']], 'FROM': [{'AS':'main'}, {'AS':'secondary', 'ON': ['=', ['.main.num1'], ['.secondary.theone']], 'JOIN':'LEFT OUTER'}]}"));
+    e.reset(query->createEnumerator());
+    REQUIRE(e->getRowCount() == 11);
+    e->seek(4);
+    CHECK(e->columns()[0]->asInt() == 4);
+    CHECK(e->columns()[1]->asInt() == 4);
+    REQUIRE(e->next());
+    CHECK(e->columns()[0]->asInt() == 5);
+    CHECK(e->columns()[1]->asInt() == 0);
+    
+    // NEED TO DEFINE THIS BEHAVIOR.  WHAT IS THE CORRECT RESULT?  THE BELOW FAILS!
+    /*query = store->compileQuery(json5(
+        "{'WHAT': [['.main.num1'], ['.secondary.num2']], 'FROM': [{'AS':'main'}, {'AS':'secondary', 'JOIN':'CROSS'}], 'ORDER_BY': ['.secondary.num2']}"));
+    e.reset(query->createEnumerator());
+    REQUIRE(e->getRowCount() == 100);
+    for(int i = 0; i < 100; i++) {
+        REQUIRE(e->next());
+        CHECK(e->columns()[0]->asInt() == (i % 10));
+        CHECK(e->columns()[1]->asInt() == (i / 10));
+    }*/
+}
+
+// NOTE: This test cannot be reproduced in this way on Windows, and it is likely a Unix specific
+// problem.  Leaving an enumerator open in this way will cause a permission denied error when
+// trying to delete the database via db->deleteDataFile()
+#ifndef _MSC_VER
+TEST_CASE_METHOD(DataFileTestFixture, "Query finalized after db deleted", "[Query]") {
+    Retained<Query> query{ store->compileQuery(json5(
+          "{WHAT: ['.num', ['*', ['.num'], ['.num']]], WHERE: ['>', ['.num'], 10]}")) };
+    unique_ptr<QueryEnumerator> e(query->createEnumerator());
+    e->next();
+    query = nullptr;
+
+    db->deleteDataFile();
+    db = nullptr;
+
+    // Now free the query enum, which will free the sqlite_stmt, triggering a SQLite warning
+    // callback about the database file being unlinked:
+    e.reset();
+
+    // Assert that the callback did not log a warning:
+    CHECK(warningsLogged() == 0);
 }
 #endif

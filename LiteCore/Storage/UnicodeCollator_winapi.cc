@@ -1,9 +1,19 @@
 //
-//  UnicodeCollator_winapi.cc
-//  LiteCore
+// UnicodeCollator_winapi.cc
 //
-//  Created by Jim Borden on 8/2/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "UnicodeCollator.hh"
@@ -12,6 +22,7 @@
 #include "Logging.hh"
 #include "SQLiteCpp/SQLiteCpp.h"
 #include "StringUtil.hh"
+#include "TempArray.hh"
 #include <sqlite3.h>
 #include <algorithm>
 
@@ -74,15 +85,20 @@ namespace litecore {
         LPWSTR locale = ctx.localeName;
         DWORD winFlags = ctx.flags;
 
-        StackArray(wchars1, WCHAR, len1);
-        int size1 = MultiByteToWideChar(CP_UTF8, 0, (char *)chars1, len1, wchars1, len1);
-        wchars1[size1++] = 0;
+		// +1 these just in case they end up being the same length to not overrun the buffer
+        TempArray(wchars1, WCHAR, len1 + 1); 
+        int size1 = MultiByteToWideChar(CP_UTF8, 0, (char *)chars1, len1, wchars1, len1 + 1);
+		while(size1 < len1 + 1) {
+			wchars1[size1++] = 0;
+		}
 
-        StackArray(wchars2, WCHAR, len2);
-        int size2 = MultiByteToWideChar(CP_UTF8, 0, (char *)chars2, len2, wchars2, len2);
-        wchars2[size2++] = 0;
+        TempArray(wchars2, WCHAR, len2 + 1);
+        int size2 = MultiByteToWideChar(CP_UTF8, 0, (char *)chars2, len2, wchars2, len2 + 1);
+        while(size2 < len2 + 1) {
+	        wchars2[size2++] = 0;
+        }
 
-        int result = CompareStringEx(locale, winFlags, wchars1, size1, wchars2, size2, nullptr, nullptr, 0);
+        int result = CompareStringEx(locale, winFlags, wchars1, -1, wchars2, -1, nullptr, nullptr, 0);
         if (result == 0) {
             DWORD err = GetLastError();
             Warn("Failed to compare strings (Error %d), arbitrarily returning equal", err);

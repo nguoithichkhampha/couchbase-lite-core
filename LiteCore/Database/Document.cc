@@ -1,9 +1,19 @@
 //
-//  Document.cc
-//  LiteCore
+// Document.cc
 //
-//  Created by Jens Alfke on 4/19/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "Document.hh"
@@ -208,24 +218,26 @@ namespace c4Internal {
         if (encodingProp && containsAnyOf(encodingProp->asString(), kCompressedTypeSubstrings))
             return false;
 
+        // Don't compress attachments with unknown MIME type:
         auto typeProp = meta->get("content_type"_sl, sk);
-        if (typeProp) {
-            slice type = typeProp->asString();
-            if (type) {
-                // Check the MIME type:
-                string lc = type.asString();
-                toLowercase(lc);
-                type = lc;
-                if (containsAnyOf(type, kCompressedTypeSubstrings))
-                    return false;
-                else if (type.hasPrefix("text/"_sl) || containsAnyOf(type, kGoodTypeSubstrings))
-                    return true;
-                else if (startsWithAnyOf(type, kBadTypePrefixes))
-                    return false;
-            }
-        }
-        // Default to allowing compression.
-        return true;
+        if (!typeProp)
+            return false;
+        slice type = typeProp->asString();
+        if (!type)
+            return false;
+
+        // Check the MIME type:
+        string lc = type.asString();
+        toLowercase(lc);
+        type = lc;
+        if (containsAnyOf(type, kCompressedTypeSubstrings))
+            return false;
+        else if (type.hasPrefix("text/"_sl) || containsAnyOf(type, kGoodTypeSubstrings))
+            return true;
+        else if (startsWithAnyOf(type, kBadTypePrefixes))
+            return false;
+        else
+            return true;
     }
 
 }

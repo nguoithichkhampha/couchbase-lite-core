@@ -1,3 +1,20 @@
+// 
+//  TestBase.cs
+// 
+//  Copyright (c) 2017 Couchbase, Inc All rights reserved.
+// 
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+// 
+//  http://www.apache.org/licenses/LICENSE-2.0
+// 
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+// 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -49,12 +66,18 @@ namespace LiteCore.Tests
 
         protected void WriteLine(string line = "")
         {
-            _output.WriteLine($"{_sb.ToString()}{line}");
+            // StringBuilder is not threadsafe
+            lock (_sb) {
+                _output.WriteLine($"{_sb}{line}");
+            }
         }
 
         protected void Write(string str)
         { 
-            _sb.Append(str);
+            // StringBuilder is not threadsafe
+            lock (_sb) {
+                _sb.Append(str);
+            }
         }
 
         protected void RunTestVariants(Action a, [CallerMemberName]string caller = null)
@@ -80,7 +103,7 @@ namespace LiteCore.Tests
             }
         }
 
-#if NETCOREAPP1_0
+#if NETCOREAPP2_0
         [System.Runtime.InteropServices.DllImport("kernel32", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hFile, uint dwFlags);
 
@@ -118,13 +141,7 @@ namespace LiteCore.Tests
 
         internal static string LoadFromAppContext()
         {
-            var codeBase = AppContext.BaseDirectory;
-            if (!codeBase.EndsWith("\\")) {
-                codeBase = codeBase + "\\";
-            }
-
-            UriBuilder uri = new UriBuilder(codeBase);
-            var directory = System.IO.Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
+            var directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             System.Diagnostics.Debug.Assert(System.IO.Path.IsPathRooted(directory), "directory is not rooted.");
             var architecture = IntPtr.Size == 4

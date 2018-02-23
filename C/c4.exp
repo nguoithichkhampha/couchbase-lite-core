@@ -8,6 +8,7 @@ _kC4SQLiteStorageEngine
 _kC4DatabaseFilenameExtension
 
 _c4_getBuildInfo
+_c4_getVersion
 
 _kC4Cpp_DefaultLog
 _kC4DefaultLog
@@ -195,6 +196,7 @@ _c4db_getCookies
 _c4db_clearCookies
 
 _kC4ReplicatorActivityLevelNames
+_kC4SocketOptionWSProtocols
 
 # Private API:
 _c4error_return

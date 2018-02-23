@@ -1,9 +1,19 @@
 //
-//  Replicator.cc
-//  LiteCore
+// Replicator.cc
 //
-//  Created by Jens Alfke on 2/13/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 //  https://github.com/couchbase/couchbase-lite-core/wiki/Replication-Protocol
 
@@ -67,6 +77,9 @@ namespace litecore { namespace repl {
     {
         _loggingID = string(c4::sliceResult(c4db_getPath(db))) + " " + _loggingID;
         _important = 2;
+
+        log("%s", string(options).c_str());
+
         if (options.push != kC4Disabled)
             _pusher = new Pusher(connection, this, _dbActor, _options);
         if (options.pull != kC4Disabled)
@@ -91,7 +104,7 @@ namespace litecore { namespace repl {
                            Delegate &delegate,
                            Options options)
     :Replicator(db, webSocket->address(), delegate, options,
-                new Connection(webSocket, *this))
+                new Connection(webSocket, options.properties, *this))
     { }
 
 
@@ -105,6 +118,7 @@ namespace litecore { namespace repl {
 
     void Replicator::_stop() {
         if (connection()) {
+            log("Told to stop!");
             connection()->close();
             _connectionState = Connection::kClosing;
         }
@@ -151,8 +165,9 @@ namespace litecore { namespace repl {
         else if (_pushStatus.error.code)
             onError(_pushStatus.error);
 
-        // Save a checkpoint immediately when push or pull finishes:
-        if (taskStatus.level == kC4Stopped)
+        // Save a checkpoint immediately when push or pull finishes or goes idle:
+        if ((taskStatus.level == kC4Stopped || taskStatus.level == kC4Idle)
+                && (task == _pusher || task == _puller))
             _checkpoint.save();
     }
 
@@ -228,6 +243,11 @@ namespace litecore { namespace repl {
 
 
     void Replicator::_onHTTPResponse(int status, fleeceapi::AllocedDict headers) {
+        if (status == 101 && !headers["Sec-WebSocket-Protocol"]) {
+            gotError(c4error_make(WebSocketDomain, kWebSocketCloseProtocolError,
+                                  "Incompatible replication protocol "
+                                  "(missing 'Sec-WebSocket-Accept' response header)"_sl));
+        }
         auto setCookie = headers["Set-Cookie"_sl];
         if (setCookie.type() == kFLArray) {
             // Yes, there can be multiple Set-Cookie headers.
@@ -243,15 +263,17 @@ namespace litecore { namespace repl {
 
     void Replicator::_onConnect() {
         log("BLIP Connected");
-        _connectionState = Connection::kConnected;
-        if (_options.push > kC4Passive || _options.pull > kC4Passive)
-            getCheckpoints();
+        if (_connectionState != Connection::kClosing) {     // skip this if stop() already called
+            _connectionState = Connection::kConnected;
+            if (_options.push > kC4Passive || _options.pull > kC4Passive)
+                getCheckpoints();
+        }
     }
 
 
     void Replicator::_onClose(Connection::CloseStatus status, Connection::State state) {
-        log("Connection closed with %-s %d: \"%.*s\"",
-            status.reasonName(), status.code, SPLAT(status.message));
+        log("Connection closed with %-s %d: \"%.*s\" (state=%d)",
+            status.reasonName(), status.code, SPLAT(status.message), _connectionState);
 
         bool closedByPeer = (_connectionState != Connection::kClosing);
         _connectionState = state;
@@ -381,8 +403,8 @@ namespace litecore { namespace repl {
     void Replicator::_saveCheckpoint(alloc_slice json) {
         if (!connection())
             return;
-        log("Saving remote checkpoint %.*s with rev='%.*s' ...",
-            SPLAT(_checkpointDocID), SPLAT(_checkpointRevID));
+        log("Saving remote checkpoint %.*s with rev='%.*s': %.*s ...",
+            SPLAT(_checkpointDocID), SPLAT(_checkpointRevID), SPLAT(json));
         MessageBuilder msg("setCheckpoint"_sl);
         msg["client"_sl] = _checkpointDocID;
         msg["rev"_sl] = _checkpointRevID;
@@ -393,6 +415,10 @@ namespace litecore { namespace repl {
                 return;
             if (response->isError()) {
                 gotError(response);
+                warn("Failed to save checkpoint!");
+                // If the checkpoint didn't save, something's wrong; but if we don't mark it as
+                // saved, the replicator will stay busy (see computeActivityLevel, line 169).
+                _checkpoint.saved();
                 // TODO: On 409 error, reload remote checkpoint
             } else {
                 // Remote checkpoint saved, so update local one:
@@ -403,7 +429,6 @@ namespace litecore { namespace repl {
                     _checkpoint.saved();
                 }));
             }
-            // Tell the checkpoint the save is finished, so it will call me again
         });
     }
 

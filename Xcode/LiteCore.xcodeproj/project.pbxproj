@@ -47,6 +47,8 @@
 		270C6BAA1EBA764B00E73415 /* LogDecoder.cc in Sources */ = {isa = PBXBuildFile; fileRef = 270C6B871EBA2CD600E73415 /* LogDecoder.cc */; };
 		270C6BAB1EBA765E00E73415 /* StringUtil.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2754B0C01E5F49AA00A05FD0 /* StringUtil.cc */; };
 		270C6BAC1EBA767300E73415 /* libFleece.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27FA09BC1D70ADE8005888AA /* libFleece.a */; };
+		270C7D4D2022914C00FF86D3 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 270515581D907F6200D62D05 /* CoreFoundation.framework */; };
+		270C7D522022916D00FF86D3 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 270515581D907F6200D62D05 /* CoreFoundation.framework */; };
 		27139B3118F8E9750021A9A3 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 275072AB18E4A68E00A80C5A /* XCTest.framework */; };
 		2722504E1D7892610006D5A5 /* c4BlobStore.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2722504D1D7892610006D5A5 /* c4BlobStore.cc */; };
 		2722504F1D7892610006D5A5 /* c4BlobStore.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2722504D1D7892610006D5A5 /* c4BlobStore.cc */; };
@@ -95,6 +97,8 @@
 		273E9F771C516145003115A6 /* c4.c in Sources */ = {isa = PBXBuildFile; fileRef = 2757DE5A1B9FC5C7002EE261 /* c4.c */; };
 		27416E2A1E0494DF00F10F65 /* c4QueryTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27416E291E0494DF00F10F65 /* c4QueryTest.cc */; };
 		27456AFD1DC9507D00A38B20 /* SequenceTrackerTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27456AFC1DC9507D00A38B20 /* SequenceTrackerTest.cc */; };
+		274711CA2037BE5B008E9A5A /* SecureSymmetricCrypto.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274711C92037BE5A008E9A5A /* SecureSymmetricCrypto.cc */; };
+		274711CB2037BE5B008E9A5A /* SecureSymmetricCrypto.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274711C92037BE5A008E9A5A /* SecureSymmetricCrypto.cc */; };
 		2749B9491EAEBFFF0068DBF9 /* c4ExceptionUtils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2749B9471EAEBFFF0068DBF9 /* c4ExceptionUtils.cc */; };
 		2749B94A1EAEBFFF0068DBF9 /* c4ExceptionUtils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2749B9471EAEBFFF0068DBF9 /* c4ExceptionUtils.cc */; };
 		2749B94D1EAEBFFF0068DBF9 /* c4ExceptionUtils.hh in Headers */ = {isa = PBXBuildFile; fileRef = 2749B9481EAEBFFF0068DBF9 /* c4ExceptionUtils.hh */; };
@@ -122,7 +126,6 @@
 		274EDDF71DA30B43003AD158 /* QueryParser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274EDDF41DA30B43003AD158 /* QueryParser.cc */; };
 		274EDDF81DA30B43003AD158 /* QueryParser.hh in Headers */ = {isa = PBXBuildFile; fileRef = 274EDDF51DA30B43003AD158 /* QueryParser.hh */; };
 		274EDDFA1DA322D4003AD158 /* QueryParserTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274EDDF91DA322D4003AD158 /* QueryParserTest.cc */; };
-		275073701F4C8CA5003D2CCE /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = 2750736D1F4C8C62003D2CCE /* sqlite3.c */; };
 		27513A5D1A687EF80055DC40 /* sqlite3_unicodesn_tokenizer.c in Sources */ = {isa = PBXBuildFile; fileRef = 27513A591A687E770055DC40 /* sqlite3_unicodesn_tokenizer.c */; };
 		2753AF721EBD190600C12E98 /* LogDecoder.cc in Sources */ = {isa = PBXBuildFile; fileRef = 270C6B871EBA2CD600E73415 /* LogDecoder.cc */; };
 		2753AF761EBD190700C12E98 /* LogDecoder.cc in Sources */ = {isa = PBXBuildFile; fileRef = 270C6B871EBA2CD600E73415 /* LogDecoder.cc */; };
@@ -190,8 +193,6 @@
 		277C14711EA8102B0075348F /* Document.cc in Sources */ = {isa = PBXBuildFile; fileRef = 277C14701EA8102B0075348F /* Document.cc */; };
 		277C14721EA8102B0075348F /* Document.cc in Sources */ = {isa = PBXBuildFile; fileRef = 277C14701EA8102B0075348F /* Document.cc */; };
 		277C147A1EA826790075348F /* libFleece.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27FA09BC1D70ADE8005888AA /* libFleece.a */; };
-		277C1B1F1F58770400031200 /* Tool.cc in Sources */ = {isa = PBXBuildFile; fileRef = 277C1B1E1F58770400031200 /* Tool.cc */; };
-		277C1B241F58794100031200 /* libreadline.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 277C1B231F58794100031200 /* libreadline.tbd */; };
 		2783DF991D27436700F84E6E /* c4ThreadingTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2783DF981D27436700F84E6E /* c4ThreadingTest.cc */; };
 		2787EB271F4C91B000DB97B0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27766E151982DA8E00CAA464 /* Security.framework */; };
 		2787EB291F4C929C00DB97B0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27766E151982DA8E00CAA464 /* Security.framework */; };
@@ -203,6 +204,7 @@
 		278BD68B1EEB6756000DBF41 /* DatabaseCookies.cc in Sources */ = {isa = PBXBuildFile; fileRef = 278BD6891EEB6756000DBF41 /* DatabaseCookies.cc */; };
 		278BD68C1EEB6756000DBF41 /* DatabaseCookies.cc in Sources */ = {isa = PBXBuildFile; fileRef = 278BD6891EEB6756000DBF41 /* DatabaseCookies.cc */; };
 		278BD68D1EEB6756000DBF41 /* DatabaseCookies.hh in Headers */ = {isa = PBXBuildFile; fileRef = 278BD68A1EEB6756000DBF41 /* DatabaseCookies.hh */; };
+		2791EA1420326F7100BD813C /* SQLiteChooser.c in Sources */ = {isa = PBXBuildFile; fileRef = 2791EA1320326F7100BD813C /* SQLiteChooser.c */; };
 		2796916E1ED4B2D50086565D /* Error.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27393A861C8A353A00829C9B /* Error.cc */; };
 		2796916F1ED4B2D50086565D /* FilePath.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27E89BA41D679542002C32B3 /* FilePath.cc */; };
 		279691701ED4B2D50086565D /* RefCounted.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27F7A0C31D5E657C00447BC6 /* RefCounted.cc */; };
@@ -248,6 +250,8 @@
 		27ADA78B1F2AB6C800D9DE25 /* UnicodeCollator.hh in Headers */ = {isa = PBXBuildFile; fileRef = 27ADA7881F2AB6C800D9DE25 /* UnicodeCollator.hh */; };
 		27ADA79B1F2BF64100D9DE25 /* UnicodeCollator.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27ADA79A1F2BF64100D9DE25 /* UnicodeCollator.cc */; };
 		27ADA79C1F2BF64100D9DE25 /* UnicodeCollator.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27ADA79A1F2BF64100D9DE25 /* UnicodeCollator.cc */; };
+		27B321B72009615B00C40AD5 /* cbliteTool+serve.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27B321B62009615B00C40AD5 /* cbliteTool+serve.cc */; };
+		27B321BE20096E1600C40AD5 /* libLiteCoreREST-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27FC81E81EAAB0D90028E38E /* libLiteCoreREST-static.a */; };
 		27B341271D9C7A90009FFA0B /* SQLiteFleeceFunctions.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27B341251D9C7A90009FFA0B /* SQLiteFleeceFunctions.cc */; };
 		27B341281D9C7A90009FFA0B /* SQLiteFleeceFunctions.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27B341251D9C7A90009FFA0B /* SQLiteFleeceFunctions.cc */; };
 		27B341291D9C7A90009FFA0B /* SQLite_Internal.hh in Headers */ = {isa = PBXBuildFile; fileRef = 27B341261D9C7A90009FFA0B /* SQLite_Internal.hh */; };
@@ -311,8 +315,8 @@
 		27DF46C41A12CF46007BB4A4 /* Record.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27DF46C21A12CF46007BB4A4 /* Record.cc */; };
 		27DF4C271ECCD70B00EE6B8D /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 270515581D907F6200D62D05 /* CoreFoundation.framework */; };
 		27DF7D351F3ACEBF0022F3DF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27139B1F18F8E9750021A9A3 /* Foundation.framework */; };
-		27DF7D691F42368D0022F3DF /* libSQLCipher.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27DF7D631F4236500022F3DF /* libSQLCipher.a */; };
-		27DF7D6A1F4236950022F3DF /* libSQLCipher.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27DF7D631F4236500022F3DF /* libSQLCipher.a */; };
+		27DF7D691F42368D0022F3DF /* libSQLite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27DF7D631F4236500022F3DF /* libSQLite.a */; };
+		27DF7D6A1F4236950022F3DF /* libSQLite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 27DF7D631F4236500022F3DF /* libSQLite.a */; };
 		27E0CA9E1DBEAA130089A9C0 /* c4DocumentTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27E0CA9D1DBEAA130089A9C0 /* c4DocumentTest.cc */; };
 		27E0CAA01DBEB0BA0089A9C0 /* DocumentKeysTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27E0CA9F1DBEB0BA0089A9C0 /* DocumentKeysTest.cc */; };
 		27E0CAA51DBEC3440089A9C0 /* DocumentKeys.hh in Headers */ = {isa = PBXBuildFile; fileRef = 27E0CAA21DBEC3440089A9C0 /* DocumentKeys.hh */; };
@@ -435,12 +439,19 @@
 		720EA4121BA8D834002B8416 /* VersionedDocument.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27E487291923F24D007D8940 /* VersionedDocument.cc */; };
 		720EA4131BA8D834002B8416 /* RevID.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27DD1511193CD005009A367D /* RevID.cc */; };
 		720EA4141BA8D834002B8416 /* RevTree.cc in Sources */ = {isa = PBXBuildFile; fileRef = 27E487211922A64F007D8940 /* RevTree.cc */; };
+		722AA64B20005E3500261887 /* ArgumentTokenizer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 722AA64A20005E3500261887 /* ArgumentTokenizer.cc */; };
+		722AA64C20005E3500261887 /* ArgumentTokenizer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 722AA64A20005E3500261887 /* ArgumentTokenizer.cc */; };
+		722AA64D20005E5A00261887 /* Tool.cc in Sources */ = {isa = PBXBuildFile; fileRef = 277C1B1E1F58770400031200 /* Tool.cc */; };
+		722AA64F20005F6900261887 /* TokenizerTest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 722AA64E20005F6900261887 /* TokenizerTest.cc */; };
 		726F2B901EB2C36E00C1EC3C /* DefaultLogger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 726F2B8F1EB2C36E00C1EC3C /* DefaultLogger.cc */; };
 		726F2B911EB2C36E00C1EC3C /* DefaultLogger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 726F2B8F1EB2C36E00C1EC3C /* DefaultLogger.cc */; };
 		7280F7F11E3AC9A600E3F097 /* libLiteCore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7280F7F01E3AC9A600E3F097 /* libLiteCore.dylib */; };
 		7280F7F21E3AC9BB00E3F097 /* libLiteCore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7280F7F01E3AC9A600E3F097 /* libLiteCore.dylib */; };
 		728EC54D1EC14611002C9A73 /* c4Listener.h in Headers */ = {isa = PBXBuildFile; fileRef = 728EC54C1EC14611002C9A73 /* c4Listener.h */; };
 		728EC54E1EC14611002C9A73 /* c4Listener.h in Headers */ = {isa = PBXBuildFile; fileRef = 728EC54C1EC14611002C9A73 /* c4Listener.h */; };
+		729E1C901FEB190A00AAC625 /* wcwidth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 729E1C8C1FEB190900AAC625 /* wcwidth.cpp */; };
+		729E1C911FEB190A00AAC625 /* ConvertUTF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 729E1C8D1FEB190900AAC625 /* ConvertUTF.cpp */; };
+		729E1C921FEB190A00AAC625 /* linenoise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 729E1C8F1FEB190900AAC625 /* linenoise.cpp */; };
 		72A3AF891F424EC0001E16D4 /* PrebuiltCopier.cc in Sources */ = {isa = PBXBuildFile; fileRef = 72A3AF871F424EC0001E16D4 /* PrebuiltCopier.cc */; };
 		72A3AF8D1F425134001E16D4 /* PrebuiltCopier.hh in Headers */ = {isa = PBXBuildFile; fileRef = 72A3AF881F424EC0001E16D4 /* PrebuiltCopier.hh */; };
 		72A3AF8E1F425140001E16D4 /* PrebuiltCopier.cc in Sources */ = {isa = PBXBuildFile; fileRef = 72A3AF871F424EC0001E16D4 /* PrebuiltCopier.cc */; };
@@ -690,6 +701,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 720EA3DB1BA7EAD9002B8416;
 			remoteInfo = "LiteCore dylib";
+		};
+		27B321BC20096E1000C40AD5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2750723318E3E52800A80C5A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 27FC81E71EAAB0D90028E38E;
+			remoteInfo = "LiteCoreREST static";
 		};
 		27BF02421FB620E5003D5BB8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -973,17 +991,6 @@
 		273613FB1F16976300ECB9DF /* ReplicatorAPITest.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ReplicatorAPITest.hh; sourceTree = "<group>"; };
 		27393A861C8A353A00829C9B /* Error.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Error.cc; sourceTree = "<group>"; };
 		273AD3CF18F4B23A007D8C23 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; wrapsLines = 1; };
-		273AD3D118F5E8D8007D8C23 /* snappy-c.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "snappy-c.cc"; sourceTree = "<group>"; };
-		273AD3D218F5E8D8007D8C23 /* snappy-c.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "snappy-c.h"; sourceTree = "<group>"; };
-		273AD3D318F5E8D8007D8C23 /* snappy-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "snappy-internal.h"; sourceTree = "<group>"; };
-		273AD3D418F5E8D8007D8C23 /* snappy-sinksource.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "snappy-sinksource.cc"; sourceTree = "<group>"; };
-		273AD3D518F5E8D8007D8C23 /* snappy-sinksource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "snappy-sinksource.h"; sourceTree = "<group>"; };
-		273AD3D618F5E8D8007D8C23 /* snappy-stubs-internal.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "snappy-stubs-internal.cc"; sourceTree = "<group>"; };
-		273AD3D718F5E8D8007D8C23 /* snappy-stubs-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "snappy-stubs-internal.h"; sourceTree = "<group>"; };
-		273AD3DA18F5E8D8007D8C23 /* snappy.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = snappy.cc; sourceTree = "<group>"; };
-		273AD3DB18F5E8D8007D8C23 /* snappy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snappy.h; sourceTree = "<group>"; };
-		273AD3E718F5EB15007D8C23 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		273AD3E818F5EB15007D8C23 /* snappy-stubs-public.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "snappy-stubs-public.h"; sourceTree = "<group>"; };
 		273E557F1F7B0ED7000182F1 /* RemoteEndpoint.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = RemoteEndpoint.hh; sourceTree = "<group>"; };
 		273E55801F7B0ED7000182F1 /* RemoteEndpoint.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteEndpoint.cc; sourceTree = "<group>"; };
 		273E9EC01C506C60003115A6 /* c4DocEnumerator.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = c4DocEnumerator.cc; sourceTree = "<group>"; };
@@ -1005,6 +1012,10 @@
 		27416E291E0494DF00F10F65 /* c4QueryTest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = c4QueryTest.cc; sourceTree = "<group>"; };
 		27456AFC1DC9507D00A38B20 /* SequenceTrackerTest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SequenceTrackerTest.cc; sourceTree = "<group>"; };
 		2745DE4B1E735B9000F02CA0 /* ReplicatorAPITest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplicatorAPITest.cc; sourceTree = "<group>"; };
+		274711C92037BE5A008E9A5A /* SecureSymmetricCrypto.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SecureSymmetricCrypto.cc; sourceTree = "<group>"; };
+		2747664520190841007B39D1 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		2747664720190841007B39D1 /* sqlite3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqlite3.c; sourceTree = "<group>"; };
+		2747664820190841007B39D1 /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3.h; sourceTree = "<group>"; };
 		27491C9A1E7B1001001DC54B /* c4Socket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = c4Socket.h; sourceTree = "<group>"; };
 		27491C9E1E7B2532001DC54B /* c4Socket.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = c4Socket.cc; sourceTree = "<group>"; };
 		27491CA21E7B6A79001DC54B /* c4Socket+Internal.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = "c4Socket+Internal.hh"; sourceTree = "<group>"; };
@@ -1049,9 +1060,6 @@
 		2750735A1F4B5ECC003D2CCE /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2750735B1F4B5EDB003D2CCE /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2750735E1F4B5F6B003D2CCE /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		2750736C1F4C8BA9003D2CCE /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		2750736D1F4C8C62003D2CCE /* sqlite3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqlite3.c; path = src/c/sqlite3.c; sourceTree = "<group>"; };
-		2750736F1F4C8C96003D2CCE /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqlite3.h; path = src/headers/sqlite3.h; sourceTree = "<group>"; };
 		27513A591A687E770055DC40 /* sqlite3_unicodesn_tokenizer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = sqlite3_unicodesn_tokenizer.c; sourceTree = "<group>"; };
 		27513A5C1A687EA70055DC40 /* sqlite3_unicodesn_tokenizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqlite3_unicodesn_tokenizer.h; sourceTree = "<group>"; };
 		2753AF7C1EBD1BE300C12E98 /* Logging_Stub.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Logging_Stub.cc; sourceTree = "<group>"; };
@@ -1133,6 +1141,9 @@
 		278963661D7B7E7D00493096 /* Stream.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Stream.cc; sourceTree = "<group>"; };
 		278BD6891EEB6756000DBF41 /* DatabaseCookies.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DatabaseCookies.cc; sourceTree = "<group>"; };
 		278BD68A1EEB6756000DBF41 /* DatabaseCookies.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DatabaseCookies.hh; sourceTree = "<group>"; };
+		2791EA1320326F7100BD813C /* SQLiteChooser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SQLiteChooser.c; sourceTree = "<group>"; };
+		2791EA192032732500BD813C /* Project_Debug_EE.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project_Debug_EE.xcconfig; sourceTree = "<group>"; };
+		2791EA1A203273BF00BD813C /* Project_Release_EE.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project_Release_EE.xcconfig; sourceTree = "<group>"; };
 		279691631ED4B29E0086565D /* libSupport.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSupport.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		279691971ED4C3950086565D /* c4Listener+RESTFactory.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "c4Listener+RESTFactory.cc"; sourceTree = "<group>"; };
 		2797BCAE1C10F69E00E5C991 /* c4AllDocsPerformanceTest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = c4AllDocsPerformanceTest.cc; sourceTree = "<group>"; };
@@ -1152,6 +1163,7 @@
 		279D41421EA5918200D8DD9D /* LiteCoreServ */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = LiteCoreServ; sourceTree = BUILT_PRODUCTS_DIR; };
 		279D414C1EA591C900D8DD9D /* LiteCoreServ.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LiteCoreServ.cc; sourceTree = "<group>"; };
 		279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = LiteCoreServ.xcconfig; sourceTree = "<group>"; };
+		27A16314201FC2A500C18D9C /* DataFile+Shared.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = "DataFile+Shared.hh"; sourceTree = "<group>"; };
 		27A657BE1CBC1A3D00A7A1D7 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		27A924941D9B316D00086206 /* LiteCore-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "LiteCore-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		27A924971D9B316D00086206 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -1168,6 +1180,7 @@
 		27ADA7871F2AB6C800D9DE25 /* UnicodeCollator_Apple.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeCollator_Apple.cc; sourceTree = "<group>"; };
 		27ADA7881F2AB6C800D9DE25 /* UnicodeCollator.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = UnicodeCollator.hh; sourceTree = "<group>"; };
 		27ADA79A1F2BF64100D9DE25 /* UnicodeCollator.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeCollator.cc; sourceTree = "<group>"; };
+		27B321B62009615B00C40AD5 /* cbliteTool+serve.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "cbliteTool+serve.cc"; sourceTree = "<group>"; };
 		27B341251D9C7A90009FFA0B /* SQLiteFleeceFunctions.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SQLiteFleeceFunctions.cc; sourceTree = "<group>"; };
 		27B341261D9C7A90009FFA0B /* SQLite_Internal.hh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = SQLite_Internal.hh; sourceTree = "<group>"; };
 		27B699DA1F27B50000782145 /* SQLiteN1QLFunctions.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SQLiteN1QLFunctions.cc; sourceTree = "<group>"; };
@@ -1223,7 +1236,7 @@
 		27DD1512193CD005009A367D /* RevID.hh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = RevID.hh; sourceTree = "<group>"; };
 		27DF46C21A12CF46007BB4A4 /* Record.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Record.cc; sourceTree = "<group>"; };
 		27DF46C31A12CF46007BB4A4 /* Record.hh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Record.hh; sourceTree = "<group>"; };
-		27DF7D631F4236500022F3DF /* libSQLCipher.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSQLCipher.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		27DF7D631F4236500022F3DF /* libSQLite.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSQLite.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		27DF7D6B1F4236E90022F3DF /* SQLite.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = SQLite.xcconfig; sourceTree = "<group>"; wrapsLines = 1; };
 		27DF7D6C1F42399E0022F3DF /* SQLite_Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = SQLite_Debug.xcconfig; sourceTree = "<group>"; wrapsLines = 1; };
 		27DF7D6D1F4239A80022F3DF /* SQLite_Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = SQLite_Release.xcconfig; sourceTree = "<group>"; };
@@ -1348,9 +1361,16 @@
 		27FDF1421DAC22230087B4E6 /* SQLiteFunctionsTest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SQLiteFunctionsTest.cc; sourceTree = "<group>"; };
 		27FDF1A21DAD79450087B4E6 /* LiteCore-dylib_Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "LiteCore-dylib_Release.xcconfig"; sourceTree = "<group>"; };
 		720EA3F51BA7EAD9002B8416 /* libLiteCore.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libLiteCore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		722AA64920005E3500261887 /* ArgumentTokenizer.hh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ArgumentTokenizer.hh; sourceTree = "<group>"; };
+		722AA64A20005E3500261887 /* ArgumentTokenizer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ArgumentTokenizer.cc; sourceTree = "<group>"; };
+		722AA64E20005F6900261887 /* TokenizerTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TokenizerTest.cc; sourceTree = "<group>"; };
 		726F2B8F1EB2C36E00C1EC3C /* DefaultLogger.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DefaultLogger.cc; sourceTree = "<group>"; };
 		7280F7F01E3AC9A600E3F097 /* libLiteCore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libLiteCore.dylib; path = ../build_cmake/libLiteCore.dylib; sourceTree = "<group>"; };
 		728EC54C1EC14611002C9A73 /* c4Listener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = c4Listener.h; sourceTree = "<group>"; };
+		729E1C8C1FEB190900AAC625 /* wcwidth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wcwidth.cpp; path = src/wcwidth.cpp; sourceTree = "<group>"; };
+		729E1C8D1FEB190900AAC625 /* ConvertUTF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ConvertUTF.cpp; path = src/ConvertUTF.cpp; sourceTree = "<group>"; };
+		729E1C8E1FEB190900AAC625 /* ConvertUTF.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ConvertUTF.h; path = src/ConvertUTF.h; sourceTree = "<group>"; };
+		729E1C8F1FEB190900AAC625 /* linenoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = linenoise.cpp; path = src/linenoise.cpp; sourceTree = "<group>"; };
 		72A3AF871F424EC0001E16D4 /* PrebuiltCopier.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PrebuiltCopier.cc; sourceTree = "<group>"; };
 		72A3AF881F424EC0001E16D4 /* PrebuiltCopier.hh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = PrebuiltCopier.hh; sourceTree = "<group>"; };
 		72C086921CBDEB2000808CE7 /* c4DocExpiration.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = c4DocExpiration.cc; sourceTree = "<group>"; };
@@ -1412,10 +1432,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				272AEC561F560FF600051F0A /* libLiteCore-static.a in Frameworks */,
+				27B321BE20096E1600C40AD5 /* libLiteCoreREST-static.a in Frameworks */,
 				272AEC611F56194A00051F0A /* Security.framework in Frameworks */,
 				272AEC551F560FF600051F0A /* CoreFoundation.framework in Frameworks */,
 				275BF35D1F5F3F920051374A /* libz.tbd in Frameworks */,
-				277C1B241F58794100031200 /* libreadline.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1434,6 +1454,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				270C7D522022916D00FF86D3 /* CoreFoundation.framework in Frameworks */,
 				279691771ED4B3720086565D /* libSupport.a in Frameworks */,
 				276E02131EA9802F00FEFE8A /* libcivetweb.a in Frameworks */,
 				276E02121EA9802A00FEFE8A /* libLiteCoreREST.dylib in Frameworks */,
@@ -1464,6 +1485,7 @@
 				279D41251EA5580A00D8DD9D /* libFleece.a in Frameworks */,
 				279D41241EA557E500D8DD9D /* libcivetweb.a in Frameworks */,
 				279D41231EA557E100D8DD9D /* libLiteCore.dylib in Frameworks */,
+				270C7D4D2022914C00FF86D3 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1517,7 +1539,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				27DF7D6A1F4236950022F3DF /* libSQLCipher.a in Frameworks */,
+				27DF7D6A1F4236950022F3DF /* libSQLite.a in Frameworks */,
 				279D41031EA54B0300D8DD9D /* libcivetweb.a in Frameworks */,
 				93CD011A1E933C0B00AFB3FA /* libblip_cpp.a in Frameworks */,
 				27FA09CB1D70BA42005888AA /* libFleece.a in Frameworks */,
@@ -1537,7 +1559,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				27DF7D691F42368D0022F3DF /* libSQLCipher.a in Frameworks */,
+				27DF7D691F42368D0022F3DF /* libSQLite.a in Frameworks */,
 				2753AFEA1EC2738D00C12E98 /* libcivetweb.a in Frameworks */,
 				72DE48181E9C559000B60952 /* libblip_cpp.a in Frameworks */,
 				27FA09C31D70AE90005888AA /* libFleece.a in Frameworks */,
@@ -1580,6 +1602,7 @@
 				2708FE591CF4D0450022F721 /* LiteCoreTest.hh */,
 				274D040A1BA75E1C00FF7C35 /* main.cpp */,
 				2750735A1F4B5ECC003D2CCE /* CMakeLists.txt */,
+				722AA64E20005F6900261887 /* TokenizerTest.cc */,
 			);
 			name = "C++ Tests";
 			path = tests;
@@ -1645,27 +1668,10 @@
 				275BF39B1F6327270051374A /* cbliteTool+ls.cc */,
 				275BF3981F6326910051374A /* cbliteTool+query.cc */,
 				275BF39F1F6328B70051374A /* cbliteTool+revs.cc */,
+				27B321B62009615B00C40AD5 /* cbliteTool+serve.cc */,
 				275BF3A31F632C110051374A /* cbliteTool+sql.cc */,
 			);
 			path = cblite;
-			sourceTree = "<group>";
-		};
-		273AD3D018F5E8B0007D8C23 /* snappy */ = {
-			isa = PBXGroup;
-			children = (
-				273AD3E718F5EB15007D8C23 /* config.h */,
-				273AD3E818F5EB15007D8C23 /* snappy-stubs-public.h */,
-				273AD3D118F5E8D8007D8C23 /* snappy-c.cc */,
-				273AD3D218F5E8D8007D8C23 /* snappy-c.h */,
-				273AD3D318F5E8D8007D8C23 /* snappy-internal.h */,
-				273AD3D418F5E8D8007D8C23 /* snappy-sinksource.cc */,
-				273AD3D518F5E8D8007D8C23 /* snappy-sinksource.h */,
-				273AD3D618F5E8D8007D8C23 /* snappy-stubs-internal.cc */,
-				273AD3D718F5E8D8007D8C23 /* snappy-stubs-internal.h */,
-				273AD3DA18F5E8D8007D8C23 /* snappy.cc */,
-				273AD3DB18F5E8D8007D8C23 /* snappy.h */,
-			);
-			path = snappy;
 			sourceTree = "<group>";
 		};
 		273E9F7C1C518678003115A6 /* Rev-Trees */ = {
@@ -1705,9 +1711,11 @@
 				273E9FB31C519A1B003115A6 /* LiteCoreJNI.xcconfig */,
 				273E9FB61C519A1B003115A6 /* C4Tests.xcconfig */,
 				272850EC1E9D4B7D009CA22F /* CppTests.xcconfig */,
+				273E9FBC1C519A1B003115A6 /* Project.xcconfig */,
 				273E9FBA1C519A1B003115A6 /* Project_Debug.xcconfig */,
 				273E9FBB1C519A1B003115A6 /* Project_Release.xcconfig */,
-				273E9FBC1C519A1B003115A6 /* Project.xcconfig */,
+				2791EA192032732500BD813C /* Project_Debug_EE.xcconfig */,
+				2791EA1A203273BF00BD813C /* Project_Release_EE.xcconfig */,
 				27DF7D6B1F4236E90022F3DF /* SQLite.xcconfig */,
 				27DF7D6C1F42399E0022F3DF /* SQLite_Debug.xcconfig */,
 				27DF7D6D1F4239A80022F3DF /* SQLite_Release.xcconfig */,
@@ -1726,9 +1734,21 @@
 				275073481F490324003D2CCE /* litecp */,
 				270C6BA81EBA754300E73415 /* litecorelog.cc */,
 				2750735E1F4B5F6B003D2CCE /* CMakeLists.txt */,
+				722AA64920005E3500261887 /* ArgumentTokenizer.hh */,
+				722AA64A20005E3500261887 /* ArgumentTokenizer.cc */,
 			);
 			name = Tools;
 			path = ../tools;
+			sourceTree = "<group>";
+		};
+		2747664420190841007B39D1 /* sqlite3 */ = {
+			isa = PBXGroup;
+			children = (
+				2747664520190841007B39D1 /* CMakeLists.txt */,
+				2747664720190841007B39D1 /* sqlite3.c */,
+				2747664820190841007B39D1 /* sqlite3.h */,
+			);
+			path = sqlite3;
 			sourceTree = "<group>";
 		};
 		274D03E81BA734A300FF7C35 /* jni */ = {
@@ -1816,7 +1836,7 @@
 				270C6BA11EBA74D800E73415 /* litecorelog */,
 				279691631ED4B29E0086565D /* libSupport.a */,
 				93FA3F481EE21A4D00D15CF5 /* LiteCoreServ-iOS.app */,
-				27DF7D631F4236500022F3DF /* libSQLCipher.a */,
+				27DF7D631F4236500022F3DF /* libSQLite.a */,
 				272AEC5B1F560FF600051F0A /* cblite */,
 			);
 			name = Products;
@@ -1861,6 +1881,7 @@
 				274D5BA31DF8D90100BDAF9D /* SecureRandomize.cc */,
 				273E9ED41C506DB4003115A6 /* SecureRandomize.hh */,
 				274A116A1D7F484000E97A62 /* SecureSymmetricCrypto.hh */,
+				274711C92037BE5A008E9A5A /* SecureSymmetricCrypto.cc */,
 				2766F9E51E64CC03008FC9E5 /* SequenceSet.hh */,
 				2754B0C01E5F49AA00A05FD0 /* StringUtil.cc */,
 				2754B0C11E5F49AA00A05FD0 /* StringUtil.hh */,
@@ -2131,6 +2152,7 @@
 				27C319ED1A143F5D00A89EDC /* KeyStore.hh */,
 				27E48711192171EA007D8940 /* DataFile.cc */,
 				27E48712192171EA007D8940 /* DataFile.hh */,
+				27A16314201FC2A500C18D9C /* DataFile+Shared.hh */,
 				27E0CAA21DBEC3440089A9C0 /* DocumentKeys.hh */,
 				27DF46C21A12CF46007BB4A4 /* Record.cc */,
 				27DF46C31A12CF46007BB4A4 /* Record.hh */,
@@ -2148,6 +2170,7 @@
 				276301121F2FE960004A1592 /* UnicodeCollator_ICU.cc */,
 				2763011A1F32A7FD004A1592 /* UnicodeCollator_Stub.cc */,
 				276301261F394407004A1592 /* UnicodeCollator_winapi.cc */,
+				2791EA1320326F7100BD813C /* SQLiteChooser.c */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -2155,11 +2178,10 @@
 		27D74A721D4D3EC000D806E0 /* vendor */ = {
 			isa = PBXGroup;
 			children = (
-				27DF7D561F422FD70022F3DF /* SQLCipher */,
 				27CCC7B61E525DD800CE1989 /* blip_cpp.xcodeproj */,
 				277CB6251D0DED5E00702E56 /* Fleece.xcodeproj */,
 				272851151EA44921009CA22F /* civetweb */,
-				273AD3D018F5E8B0007D8C23 /* snappy */,
+				729E1C871FEB18EE00AAC625 /* linenoise-ng */,
 				27EF7FFA1914296D00A327B9 /* sqlite3-unicodesn */,
 				27D74A731D4D3F0700D806E0 /* SQLiteCpp */,
 			);
@@ -2185,19 +2207,9 @@
 				27D74A771D4D3F2300D806E0 /* Exception.cpp */,
 				27D74A781D4D3F2300D806E0 /* Statement.cpp */,
 				27D74A791D4D3F2300D806E0 /* Transaction.cpp */,
+				2747664420190841007B39D1 /* sqlite3 */,
 			);
 			path = SQLiteCpp;
-			sourceTree = "<group>";
-		};
-		27DF7D561F422FD70022F3DF /* SQLCipher */ = {
-			isa = PBXGroup;
-			children = (
-				2750736F1F4C8C96003D2CCE /* sqlite3.h */,
-				2750736D1F4C8C62003D2CCE /* sqlite3.c */,
-				2750736C1F4C8BA9003D2CCE /* CMakeLists.txt */,
-			);
-			name = SQLCipher;
-			path = sqlcipher;
 			sourceTree = "<group>";
 		};
 		27E4871019217187007D8940 /* LiteCore */ = {
@@ -2376,6 +2388,17 @@
 				27FA09C01D70ADE8005888AA /* fleece */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		729E1C871FEB18EE00AAC625 /* linenoise-ng */ = {
+			isa = PBXGroup;
+			children = (
+				729E1C8D1FEB190900AAC625 /* ConvertUTF.cpp */,
+				729E1C8E1FEB190900AAC625 /* ConvertUTF.h */,
+				729E1C8F1FEB190900AAC625 /* linenoise.cpp */,
+				729E1C8C1FEB190900AAC625 /* wcwidth.cpp */,
+			);
+			path = "linenoise-ng";
 			sourceTree = "<group>";
 		};
 		93FA3F491EE21A4D00D15CF5 /* LiteCoreServ iOS */ = {
@@ -2612,6 +2635,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				27B321BD20096E1000C40AD5 /* PBXTargetDependency */,
 				272AEC4B1F560FF600051F0A /* PBXTargetDependency */,
 			);
 			name = cblite;
@@ -2775,9 +2799,9 @@
 			productReference = 27A924AC1D9B316D00086206 /* LiteCore-iOS Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		27DF7D621F4236500022F3DF /* SQLCipher */ = {
+		27DF7D621F4236500022F3DF /* SQLite */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 27DF7D641F4236500022F3DF /* Build configuration list for PBXNativeTarget "SQLCipher" */;
+			buildConfigurationList = 27DF7D641F4236500022F3DF /* Build configuration list for PBXNativeTarget "SQLite" */;
 			buildPhases = (
 				27DF7D5F1F4236500022F3DF /* Sources */,
 				27DF7D601F4236500022F3DF /* Frameworks */,
@@ -2787,9 +2811,9 @@
 			);
 			dependencies = (
 			);
-			name = SQLCipher;
+			name = SQLite;
 			productName = SQLite;
-			productReference = 27DF7D631F4236500022F3DF /* libSQLCipher.a */;
+			productReference = 27DF7D631F4236500022F3DF /* libSQLite.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		27EF807319142C2500A327B9 /* Tokenizer */ = {
@@ -2995,7 +3019,7 @@
 				272AEC4A1F560FF600051F0A /* cblite */,
 				270C6BA01EBA74D800E73415 /* litecorelog */,
 				274D03D21BA732B000FF7C35 /* LiteCoreJNI */,
-				27DF7D621F4236500022F3DF /* SQLCipher */,
+				27DF7D621F4236500022F3DF /* SQLite */,
 				27EF807319142C2500A327B9 /* Tokenizer */,
 				279D40FD1EA54A9D00D8DD9D /* civetweb */,
 				27139B2F18F8E9750021A9A3 /* LiteCore XCTests */,
@@ -3137,6 +3161,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				722AA64B20005E3500261887 /* ArgumentTokenizer.cc in Sources */,
 				2708FE551CF4CCCE0022F721 /* main.cpp in Sources */,
 				2708FE5B1CF4D3370022F721 /* LiteCoreTest.cc in Sources */,
 				270C6B981EBA3AD200E73415 /* LogEncoderTest.cc in Sources */,
@@ -3152,6 +3177,7 @@
 				272850EA1E9D4860009CA22F /* ReplicatorLoopbackTest.cc in Sources */,
 				272850ED1E9D4C79009CA22F /* c4Test.cc in Sources */,
 				275FF6D31E494860005F90DD /* c4BaseTest.cc in Sources */,
+				722AA64F20005F6900261887 /* TokenizerTest.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3188,7 +3214,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				27D416E91FE31F7D00008197 /* DBEndpoint.cc in Sources */,
+				27B321B72009615B00C40AD5 /* cbliteTool+serve.cc in Sources */,
 				275BF3A01F6328B70051374A /* cbliteTool+revs.cc in Sources */,
+				722AA64C20005E3500261887 /* ArgumentTokenizer.cc in Sources */,
+				722AA64D20005E5A00261887 /* Tool.cc in Sources */,
 				27D416EA1FE31F7D00008197 /* RemoteEndpoint.cc in Sources */,
 				275BF3A41F632C110051374A /* cbliteTool+sql.cc in Sources */,
 				275BF3991F6326910051374A /* cbliteTool+query.cc in Sources */,
@@ -3198,9 +3227,11 @@
 				275BF39E1F6328050051374A /* cbliteTool+cat.cc in Sources */,
 				272AEC5D1F56115400051F0A /* cbliteTool.cc in Sources */,
 				27D416EC1FE31F7D00008197 /* JSONEndpoint.cc in Sources */,
-				277C1B1F1F58770400031200 /* Tool.cc in Sources */,
 				27D416E81FE31F7D00008197 /* Endpoint.cc in Sources */,
 				275BF39C1F6327270051374A /* cbliteTool+ls.cc in Sources */,
+				729E1C911FEB190A00AAC625 /* ConvertUTF.cpp in Sources */,
+				729E1C921FEB190A00AAC625 /* linenoise.cpp in Sources */,
+				729E1C901FEB190A00AAC625 /* wcwidth.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3330,7 +3361,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				275073701F4C8CA5003D2CCE /* sqlite3.c in Sources */,
+				2791EA1420326F7100BD813C /* SQLiteChooser.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3400,6 +3431,7 @@
 				2705154D1D8CBE6C00D62D05 /* c4Query.cc in Sources */,
 				27C319EE1A143F5D00A89EDC /* KeyStore.cc in Sources */,
 				2722504E1D7892610006D5A5 /* c4BlobStore.cc in Sources */,
+				274711CA2037BE5B008E9A5A /* SecureSymmetricCrypto.cc in Sources */,
 				93CD01101E933BE100AFB3FA /* Checkpoint.cc in Sources */,
 				27D74A6F1D4D3DF500D806E0 /* SQLiteDataFile.cc in Sources */,
 				27D74A841D4D3F2300D806E0 /* Transaction.cpp in Sources */,
@@ -3496,6 +3528,7 @@
 				720EA4131BA8D834002B8416 /* RevID.cc in Sources */,
 				274EDDED1DA2F488003AD158 /* SQLiteKeyStore.cc in Sources */,
 				2722504F1D7892610006D5A5 /* c4BlobStore.cc in Sources */,
+				274711CB2037BE5B008E9A5A /* SecureSymmetricCrypto.cc in Sources */,
 				27E89BA71D679542002C32B3 /* FilePath.cc in Sources */,
 				720EA40F1BA8D834002B8416 /* DataFile.cc in Sources */,
 				275CED461D3ECE9B001DE46C /* TreeDocument.cc in Sources */,
@@ -3695,6 +3728,11 @@
 			target = 720EA3DB1BA7EAD9002B8416 /* LiteCore dylib */;
 			targetProxy = 279D41211EA557DB00D8DD9D /* PBXContainerItemProxy */;
 		};
+		27B321BD20096E1000C40AD5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 27FC81E71EAAB0D90028E38E /* LiteCoreREST static */;
+			targetProxy = 27B321BC20096E1000C40AD5 /* PBXContainerItemProxy */;
+		};
 		27BF02431FB620E5003D5BB8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 272AEC4A1F560FF600051F0A /* cblite */;
@@ -3712,12 +3750,12 @@
 		};
 		27DF7D8B1F4289900022F3DF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 27DF7D621F4236500022F3DF /* SQLCipher */;
+			target = 27DF7D621F4236500022F3DF /* SQLite */;
 			targetProxy = 27DF7D8A1F4289900022F3DF /* PBXContainerItemProxy */;
 		};
 		27DF7D901F4289E60022F3DF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 27DF7D621F4236500022F3DF /* SQLCipher */;
+			target = 27DF7D621F4236500022F3DF /* SQLite */;
 			targetProxy = 27DF7D8F1F4289E60022F3DF /* PBXContainerItemProxy */;
 		};
 		27DF7D921F428A510022F3DF /* PBXTargetDependency */ = {
@@ -3943,6 +3981,494 @@
 			buildSettings = {
 			};
 			name = Release;
+		};
+		2791EA1B2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2791EA192032732500BD813C /* Project_Debug_EE.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA1C2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAA1C519A1B003115A6 /* LiteCore static.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA1D2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FB01C519A1B003115A6 /* LiteCore-dylib.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA1E2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27FC81F31EAAB1000028E38E /* REST-static.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA1F2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D411A1EA5569D00D8DD9D /* REST-dylib.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA202032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27FC81F51EAAB57B0028E38E /* LiteCore.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA212032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 272850EC1E9D4B7D009CA22F /* CppTests.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = LiteCoreCppTests;
+			};
+			name = "Debug-EE";
+		};
+		2791EA222032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FB61C519A1B003115A6 /* C4Tests.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA232032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA242032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = cblite;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = "Debug-EE";
+		};
+		2791EA252032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = "Debug-EE";
+		};
+		2791EA262032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FB31C519A1B003115A6 /* LiteCoreJNI.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA272032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27DF7D6C1F42399E0022F3DF /* SQLite_Debug.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA282032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FBF1C519A1B003115A6 /* Tokenizer.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA292032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41051EA54DB700D8DD9D /* civetweb.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA2A2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAD1C519A1B003115A6 /* LiteCore XCTests.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA2B2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				INFOPLIST_FILE = "LiteCore-iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path";
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCore-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug-EE";
+		};
+		2791EA2C2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../vendor/fleece/Fleece";
+				INFOPLIST_FILE = "LiteCoreServ-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCoreServ-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+			};
+			name = "Debug-EE";
+		};
+		2791EA2D2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAD1C519A1B003115A6 /* LiteCore XCTests.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "LiteCore-iOS Tests/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks @executable_path/../..";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCore-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiteCore-iOS.app/LiteCore-iOS";
+			};
+			name = "Debug-EE";
+		};
+		2791EA2E2032745700BD813C /* Debug-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = "Debug-EE";
+		};
+		2791EA2F2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2791EA1A203273BF00BD813C /* Project_Release_EE.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA302032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAA1C519A1B003115A6 /* LiteCore static.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA312032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27FDF1A21DAD79450087B4E6 /* LiteCore-dylib_Release.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA322032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27FC81F31EAAB1000028E38E /* REST-static.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA332032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41291EA55B3D00D8DD9D /* REST-dylib_Release.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA342032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27FC81F51EAAB57B0028E38E /* LiteCore.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA352032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 272850EC1E9D4B7D009CA22F /* CppTests.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = LiteCoreCppTests;
+			};
+			name = "Release-EE";
+		};
+		2791EA362032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FB61C519A1B003115A6 /* C4Tests.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA372032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA382032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = cblite;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = "Release-EE";
+		};
+		2791EA392032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41541EA6E70200D8DD9D /* LiteCoreServ.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = "Release-EE";
+		};
+		2791EA3A2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FB31C519A1B003115A6 /* LiteCoreJNI.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA3B2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 27DF7D6D1F4239A80022F3DF /* SQLite_Release.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA3C2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FBF1C519A1B003115A6 /* Tokenizer.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA3D2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 279D41051EA54DB700D8DD9D /* civetweb.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA3E2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAD1C519A1B003115A6 /* LiteCore XCTests.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-EE";
+		};
+		2791EA3F2032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				INFOPLIST_FILE = "LiteCore-iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCore-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-EE";
+		};
+		2791EA402032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../vendor/fleece/Fleece";
+				INFOPLIST_FILE = "LiteCoreServ-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCoreServ-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-EE";
+		};
+		2791EA412032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 273E9FAD1C519A1B003115A6 /* LiteCore XCTests.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = N2Q372V7W2;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "LiteCore-iOS Tests/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks @executable_path/../..";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.couchbase.LiteCore-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiteCore-iOS.app/LiteCore-iOS";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-EE";
+		};
+		2791EA422032746700BD813C /* Release-EE */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = "Release-EE";
 		};
 		2796916C1ED4B29E0086565D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -4331,7 +4857,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2708FE501CF4CC880022F721 /* Debug */,
+				2791EA212032745700BD813C /* Debug-EE */,
 				2708FE511CF4CC880022F721 /* Release */,
+				2791EA352032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4340,7 +4868,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				270C6BA61EBA74D800E73415 /* Debug */,
+				2791EA252032745700BD813C /* Debug-EE */,
 				270C6BA71EBA74D800E73415 /* Release */,
+				2791EA392032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4349,7 +4879,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27139B4218F8E9750021A9A3 /* Debug */,
+				2791EA2A2032745700BD813C /* Debug-EE */,
 				27139B4318F8E9750021A9A3 /* Release */,
+				2791EA3E2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4358,7 +4890,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				272AEC591F560FF600051F0A /* Debug */,
+				2791EA242032745700BD813C /* Debug-EE */,
 				272AEC5A1F560FF600051F0A /* Release */,
+				2791EA382032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4367,7 +4901,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				274D03DA1BA732B100FF7C35 /* Debug */,
+				2791EA262032745700BD813C /* Debug-EE */,
 				274D03DB1BA732B100FF7C35 /* Release */,
+				2791EA3A2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4376,7 +4912,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				274D040D1BA75E1C00FF7C35 /* Debug */,
+				2791EA222032745700BD813C /* Debug-EE */,
 				274D040E1BA75E1C00FF7C35 /* Release */,
+				2791EA362032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4385,7 +4923,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2750724718E3E52800A80C5A /* Debug */,
+				2791EA1B2032745700BD813C /* Debug-EE */,
 				2750724818E3E52800A80C5A /* Release */,
+				2791EA2F2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4394,7 +4934,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2796916C1ED4B29E0086565D /* Debug */,
+				2791EA202032745700BD813C /* Debug-EE */,
 				2796916D1ED4B29E0086565D /* Release */,
+				2791EA342032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4403,7 +4945,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				279D41001EA54A9D00D8DD9D /* Debug */,
+				2791EA292032745700BD813C /* Debug-EE */,
 				279D41011EA54A9D00D8DD9D /* Release */,
+				2791EA3D2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4412,7 +4956,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				279D41171EA5558100D8DD9D /* Debug */,
+				2791EA1F2032745700BD813C /* Debug-EE */,
 				279D41181EA5558100D8DD9D /* Release */,
+				2791EA332032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4421,7 +4967,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				279D41461EA5918200D8DD9D /* Debug */,
+				2791EA232032745700BD813C /* Debug-EE */,
 				279D41471EA5918200D8DD9D /* Release */,
+				2791EA372032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4430,7 +4978,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27A924B41D9B316D00086206 /* Debug */,
+				2791EA2B2032745700BD813C /* Debug-EE */,
 				27A924B51D9B316D00086206 /* Release */,
+				2791EA3F2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4439,7 +4989,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27A924B71D9B316D00086206 /* Debug */,
+				2791EA2D2032745700BD813C /* Debug-EE */,
 				27A924B81D9B316D00086206 /* Release */,
+				2791EA412032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4448,16 +5000,20 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27B7E0F318F8FB4800044EBA /* Debug */,
+				2791EA2E2032745700BD813C /* Debug-EE */,
 				27B7E0F418F8FB4800044EBA /* Release */,
+				2791EA422032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		27DF7D641F4236500022F3DF /* Build configuration list for PBXNativeTarget "SQLCipher" */ = {
+		27DF7D641F4236500022F3DF /* Build configuration list for PBXNativeTarget "SQLite" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27DF7D651F4236500022F3DF /* Debug */,
+				2791EA272032745700BD813C /* Debug-EE */,
 				27DF7D661F4236500022F3DF /* Release */,
+				2791EA3B2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4466,7 +5022,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27EF807619142C2500A327B9 /* Debug */,
+				2791EA282032745700BD813C /* Debug-EE */,
 				27EF807719142C2500A327B9 /* Release */,
+				2791EA3C2032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4475,7 +5033,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27EF81101917EEC600A327B9 /* Debug */,
+				2791EA1C2032745700BD813C /* Debug-EE */,
 				27EF81111917EEC600A327B9 /* Release */,
+				2791EA302032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4484,7 +5044,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				27FC81F11EAAB0D90028E38E /* Debug */,
+				2791EA1E2032745700BD813C /* Debug-EE */,
 				27FC81F21EAAB0D90028E38E /* Release */,
+				2791EA322032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4493,7 +5055,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				720EA3F31BA7EAD9002B8416 /* Debug */,
+				2791EA1D2032745700BD813C /* Debug-EE */,
 				720EA3F41BA7EAD9002B8416 /* Release */,
+				2791EA312032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -4502,7 +5066,9 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				93FA3F5D1EE21A4D00D15CF5 /* Debug */,
+				2791EA2C2032745700BD813C /* Debug-EE */,
 				93FA3F5E1EE21A4D00D15CF5 /* Release */,
+				2791EA402032746700BD813C /* Release-EE */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

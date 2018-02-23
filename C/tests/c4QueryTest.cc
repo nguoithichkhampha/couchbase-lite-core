@@ -1,9 +1,19 @@
 //
-//  c4QueryTest.cc
-//  LiteCore
+// c4QueryTest.cc
 //
-//  Created by Jens Alfke on 12/16/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "c4Test.hh"
@@ -135,11 +145,20 @@ N_WAY_TEST_CASE_METHOD(QueryTest, "DB Query", "[Query][C]") {
     compile(json5("['IS', ['.', 'contact', 'phone', [0]], ['MISSING']]"), "", true);
     CHECK(run("{\"offset\":0,\"limit\":4}") == (vector<string>{"0000004", "0000006", "0000008", "0000015"}));
 
-    // ...wherease null is a JSON null value
+    // ...whereas null is a JSON null value
     compile(json5("['IS', ['.', 'contact', 'phone', [0]], null]"), "", true);
     CHECK(run("{\"offset\":0,\"limit\":4}") == (vector<string>{}));
 }
 
+N_WAY_TEST_CASE_METHOD(QueryTest, "DB Query LIKE", "[Query][C]") {
+    compile(json5("['LIKE', ['.name.first'], '%j%']"));
+    CHECK(run() == (vector<string>{ "0000085" }));
+    compile(json5("['LIKE', ['.name.first'], '%J%']"));
+    CHECK(run() == (vector<string>{ "0000002", "0000004", "0000008", "0000017", "0000028", "0000030", "0000045", "0000052", "0000067", "0000071",
+        "0000088", "0000094" }));
+    compile(json5("['LIKE', ['.name.first'], 'Jen%']"));
+    CHECK(run() == (vector<string>{ "0000008", "0000028" }));
+}
 
 N_WAY_TEST_CASE_METHOD(QueryTest, "DB Query IN", "[Query][C]") {
     // Type 1: RHS is an expression; generates a call to array_contains
@@ -180,7 +199,7 @@ N_WAY_TEST_CASE_METHOD(QueryTest, "DB Query ANY", "[Query][C]") {
     compile(json5("['ANY AND EVERY', 'like', ['.', 'likes'], ['=', ['?', 'like'], 'taxes']]"));
     CHECK(run() == (vector<string>{}));
 
-    // Look for people where every like contains an L:
+    // Look for people where everything they like contains an L:
     compile(json5("['ANY AND EVERY', 'like', ['.', 'likes'], ['LIKE', ['?', 'like'], '%l%']]"));
     CHECK(run() == (vector<string>{ "0000017", "0000027", "0000060", "0000068" }));
 }
@@ -244,6 +263,27 @@ N_WAY_TEST_CASE_METHOD(QueryTest, "Delete indexed doc", "[Query][C]") {
     // Now run a query that would have returned the deleted doc, if it weren't deleted:
     compile(json5("['=', ['length()', ['.name.first']], 9]"));
     CHECK(run() == (vector<string>{ "0000099" }));
+}
+
+
+N_WAY_TEST_CASE_METHOD(QueryTest, "Missing columns", "[Query][C]") {
+    const char *query = nullptr;
+    uint64_t expectedMissing = 0;
+    SECTION("None missing1") {
+        query = "['SELECT', {'WHAT': [['.name'], ['.gender']], 'LIMIT': 1}]";
+        expectedMissing = 0x0;
+    }
+    SECTION("Some missing2") {
+        query = "['SELECT', {'WHAT': [['.XX'], ['.name'], ['.YY'], ['.gender'], ['.ZZ']], 'LIMIT': 1}]";
+        expectedMissing = 0x15;       // binary 10101, i.e. cols 0, 2, 4 are missing
+    }
+    if (query) {
+        compileSelect(json5(query));
+        auto results = runCollecting<uint64_t>(nullptr, [=](C4QueryEnumerator *e) {
+            return e->missingColumns;
+        });
+        CHECK(results == vector<uint64_t>{expectedMissing});
+    }
 }
 
 
@@ -559,7 +599,7 @@ N_WAY_TEST_CASE_METHOD(QueryTest, "Query refresh", "[Query][C][!throws]") {
     C4SliceResult explanation = c4query_explain(query);
     string explanationString = toString((C4Slice)explanation);
     c4slice_free(explanation);
-    CHECK(explanationString.substr(0, 101) == "SELECT key FROM kv_default WHERE (fl_value(body, 'contact.address.state') = 'CA') AND (flags & 1) = 0");
+    CHECK(explanationString.substr(0, 112) == "SELECT fl_result(key) FROM kv_default WHERE (fl_value(body, 'contact.address.state') = 'CA') AND (flags & 1) = 0");
     
     auto e = c4query_run(query, &kC4DefaultQueryOptions, kC4SliceNull, &error);
     REQUIRE(e);
@@ -642,8 +682,6 @@ N_WAY_TEST_CASE_METHOD(QueryTest, "Delete index", "[Query][C][!throws]") {
 
 #pragma mark - COLLATION:
 
-
-#if __APPLE__ || LITECORE_USES_ICU //FIXME: collator isn't available on all platforms yet
 class CollatedQueryTest : public QueryTest {
 public:
     CollatedQueryTest(int which)
@@ -700,4 +738,3 @@ N_WAY_TEST_CASE_METHOD(CollatedQueryTest, "DB Query aggregate collated", "[Query
     CHECK(artists[2083] == "Zoë Keating");
     CHECK(artists[2084] == "Zola Jesus");
 }
-#endif // __APPLE__ || LITECORE_USES_ICU

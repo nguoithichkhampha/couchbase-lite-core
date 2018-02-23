@@ -1,8 +1,5 @@
 ﻿//
-// RetryHandler.cs
-//
-// Author:
-//  Jim Borden  <jim.borden@couchbase.com>
+// NativeHandler.cs
 //
 // Copyright (c) 2015 Couchbase, Inc All rights reserved.
 //
@@ -22,8 +19,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
-using JetBrains.Annotations;
 
 namespace LiteCore.Interop
 {
@@ -89,7 +84,6 @@ namespace LiteCore.Interop
 
         private Action<LiteCoreException> _exceptionHandler;
 
-        [NotNull]
         private readonly List<C4Error> _allowedErrors = new List<C4Error>();
 
         #endregion
@@ -109,7 +103,6 @@ namespace LiteCore.Interop
         /// Creates a new object for chaining in a fluent fashion
         /// </summary>
         /// <returns>A constructed object</returns>
-        [NotNull]
         public static NativeHandler Create()
         {
             return new NativeHandler();
@@ -178,7 +171,7 @@ namespace LiteCore.Interop
             return this;
         }
 
-        public unsafe bool Execute([NotNull]C4TryLogicDelegate1 block)
+        public unsafe bool Execute(C4TryLogicDelegate1 block)
         {
             Debug.Assert(block != null);
 
@@ -193,7 +186,7 @@ namespace LiteCore.Interop
             return false;
         }
 
-        public unsafe void* Execute([NotNull]C4TryLogicDelegate2 block)
+        public unsafe void* Execute(C4TryLogicDelegate2 block)
         { 
             Debug.Assert(block != null);
 
@@ -209,7 +202,7 @@ namespace LiteCore.Interop
             return null;
         }
 
-        public unsafe int Execute([NotNull]C4TryLogicDelegate3 block)
+        public unsafe int Execute(C4TryLogicDelegate3 block)
         {
             Debug.Assert(block != null);
 
@@ -225,7 +218,7 @@ namespace LiteCore.Interop
             return retVal;
         }
 
-        public unsafe C4Slice Execute([NotNull]C4TryLogicDelegate4 block)
+        public unsafe C4Slice Execute(C4TryLogicDelegate4 block)
         {
             Debug.Assert(block != null);
 

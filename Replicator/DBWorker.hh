@@ -1,9 +1,19 @@
 //
-//  DBWorker.hh
-//  LiteCore
+// DBWorker.hh
 //
-//  Created by Jens Alfke on 2/21/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -84,7 +94,8 @@ namespace litecore { namespace repl {
         void _getCheckpoint(CheckpointCallback);
         void _setCheckpoint(alloc_slice data, std::function<void()> onComplete);
         void _getChanges(GetChangesParams, Retained<Pusher> pusher);
-        bool getForeignAncestor(C4DocEnumerator *e, alloc_slice &foreignAncestor, C4Error*);
+        bool addChangeToList(const C4DocumentInfo &info, C4Document *doc, std::vector<Rev> &changes);
+        alloc_slice getRemoteRevID(C4Document*);
         void _findOrRequestRevs(Retained<blip::MessageIn> req,
                                 std::function<void(std::vector<bool>)> callback);
         void _sendRevision(RevRequest request,
@@ -117,10 +128,12 @@ namespace litecore { namespace repl {
         c4::ref<C4DatabaseObserver> _changeObserver;        // Used in continuous push mode
         Retained<Pusher> _pusher;                           // Pusher to send db changes to
         DocIDSet _pushDocIDs;                               // Optional set of doc IDs to push
+        bool _getForeignAncestors {false};
+        bool _skipForeignChanges {false};
         std::unique_ptr<std::vector<RevToInsert*>> _revsToInsert; // Pending revs to be added to db
         std::mutex _revsToInsertMutex;                      // For safe access to _revsToInsert
         actor::Timer _insertTimer;                          // Timer for inserting revs
-        C4SequenceNumber _firstChangeSequence {0};          // First doc sequence to be pushed
+        C4SequenceNumber _maxPushedSequence {0};            // Latest seq that's been pushed
     };
 
 } }

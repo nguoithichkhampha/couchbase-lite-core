@@ -1,9 +1,19 @@
 //
-//  DBWorker.cc
-//  LiteCore
+// DBWorker.cc
 //
-//  Created by Jens Alfke on 2/21/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "DBWorker.hh"
@@ -33,8 +43,6 @@ namespace litecore { namespace repl {
 
     static constexpr auto kInsertionDelay = chrono::milliseconds(50);
 
-    static constexpr size_t kMinBodySizeToCompress = 500;
-    
 
     static bool isNotFoundError(C4Error err) {
         return err.domain == LiteCoreDomain && err.code == kC4ErrorNotFound;
@@ -59,6 +67,13 @@ namespace litecore { namespace repl {
     {
         registerHandler("getCheckpoint",    &DBWorker::handleGetCheckpoint);
         registerHandler("setCheckpoint",    &DBWorker::handleSetCheckpoint);
+    }
+
+
+    void DBWorker::_connectionClosed() {
+        Worker::_connectionClosed();
+        _pusher = nullptr;                      // breaks ref-cycle
+        _changeObserver = nullptr;
     }
 
 
@@ -122,7 +137,7 @@ namespace litecore { namespace repl {
 
     void DBWorker::_setCheckpoint(alloc_slice data, std::function<void()> onComplete) {
         C4Error err;
-        alloc_slice checkpointID(effectiveRemoteCheckpointDocID(&err));
+        auto checkpointID = effectiveRemoteCheckpointDocID(&err);
         if (checkpointID && c4raw_put(_db, kLocalCheckpointStore, checkpointID, nullslice, data, &err))
             log("Saved local checkpoint %.*s to db", SPLAT(checkpointID));
         else
@@ -131,21 +146,45 @@ namespace litecore { namespace repl {
     }
 
 
+    // Writes a Value to an Encoder, substituting null if the value is an empty array.
+    static void writeValueOrNull(Encoder &enc, Value val) {
+        auto a = val.asArray();
+        if (!val || (a && a.empty()))
+            enc.writeNull();
+        else
+            enc.writeValue(val);
+    }
+
+
     // Computes the ID of the checkpoint document.
     slice DBWorker::effectiveRemoteCheckpointDocID(C4Error *err) {
         if (_remoteCheckpointDocID.empty()) {
-            // Simplistic default value derived from db UUID and remote URL:
+            // Derive docID from from db UUID, remote URL, channels, filter, and docIDs.
             C4UUID privateUUID;
             if (!c4db_getUUIDs(_db, nullptr, &privateUUID, err))
                 return nullslice;
+            Array channels = _options.channels();
+            Value filter = _options.properties[kC4ReplicatorOptionFilter];
+            Value filterParams = _options.properties[kC4ReplicatorOptionFilterParams];
+            Array docIDs = _options.docIDs();
+
+            // Compute the ID by writing the values to a Fleece array, then taking a SHA1 digest:
             fleeceapi::Encoder enc;
             enc.beginArray();
             enc.writeString({&privateUUID, sizeof(privateUUID)});
             enc.writeString(remoteDBIDString());
+            if (!channels.empty() || !docIDs.empty() || filter) {
+                // Optional stuff:
+                writeValueOrNull(enc, channels);
+                writeValueOrNull(enc, filter);
+                writeValueOrNull(enc, filterParams);
+                writeValueOrNull(enc, docIDs);
+            }
             enc.endArray();
             alloc_slice data = enc.finish();
             SHA1 digest(data);
             _remoteCheckpointDocID = string("cp-") + slice(&digest, sizeof(digest)).base64String();
+            logVerbose("Checkpoint doc ID = %s", _remoteCheckpointDocID.c_str());
         }
         return slice(_remoteCheckpointDocID);
     }
@@ -249,8 +288,11 @@ namespace litecore { namespace repl {
         if (!connection())
             return;
         log("Reading up to %u local changes since #%llu", p.limit, p.since);
-        if (_firstChangeSequence == 0)
-            _firstChangeSequence = p.since + 1;
+        _getForeignAncestors = p.getForeignAncestors;
+        _skipForeignChanges = p.skipForeign;
+        if (_maxPushedSequence == 0)
+            _maxPushedSequence = p.since;
+        C4SequenceNumber latestChangeSequence = _maxPushedSequence;
 
         // Run a by-sequence enumerator to find the changed docs:
         vector<Rev> changes;
@@ -266,25 +308,27 @@ namespace litecore { namespace repl {
             while (c4enum_next(e, &error) && p.limit > 0) {
                 C4DocumentInfo info;
                 c4enum_getDocumentInfo(e, &info);
+                // (There's very similar code below in dbChanged; keep them in sync)
+                latestChangeSequence = info.sequence;
                 if (!passesDocIDFilter(p.docIDs, info.docID))
                     continue;       // reject rev: not in filter
-                alloc_slice foreignAncestor;
-                if (p.getForeignAncestors) {
-                    // For proposeChanges, find the nearest foreign ancestor of the current rev:
-                    if (!getForeignAncestor(e, foreignAncestor, &error)) {
+
+                c4::ref<C4Document> doc;
+                if (_getForeignAncestors) {
+                    doc = c4enum_getDocument(e, &error);
+                    if (!doc) {
                         gotDocumentError(info.docID, error, true, false);
                         continue;   // reject rev: error getting doc
-                    } else if (p.skipForeign && foreignAncestor == slice(info.revID)) {
-                        continue;   // reject rev: it's foreign
                     }
                 }
-                // Add rev to list
-                changes.emplace_back(info, foreignAncestor);
-                --p.limit;
+                if (addChangeToList(info, doc, changes))
+                    --p.limit;
             }
         }
+        _maxPushedSequence = latestChangeSequence;
 
         markRevsSynced(changes, nullptr);
+        pusher->gotChanges(changes, error);
 
         if (p.continuous && p.limit > 0 && !_changeObserver) {
             // Reached the end of history; now start observing for future changes
@@ -298,8 +342,6 @@ namespace litecore { namespace repl {
                                              this);
             logDebug("Started DB observer");
         }
-
-        pusher->gotChanges(changes, error);
     }
 
 
@@ -316,17 +358,34 @@ namespace litecore { namespace repl {
                 break;
             log("Notified of %u db changes #%llu ... #%llu",
                 nChanges, c4changes[0].sequence, c4changes[nChanges-1].sequence);
+            C4SequenceNumber latestChangeSequence = _maxPushedSequence;
             changes.clear();
             C4DatabaseChange *c4change = c4changes;
             for (uint32_t i = 0; i < nChanges; ++i, ++c4change) {
-                if (passesDocIDFilter(_pushDocIDs, c4change->docID)) {
-                    changes.emplace_back(c4change->docID, c4change->revID,
-                                         c4change->sequence, c4change->bodySize);
+                C4DocumentInfo info {0, c4change->docID, c4change->revID,
+                                     c4change->sequence, c4change->bodySize};
+                // (There's very similar code above in _getChanges; keep them in sync)
+                latestChangeSequence = info.sequence;
+                if (!passesDocIDFilter(_pushDocIDs, info.docID))
+                    continue;
+
+                c4::ref<C4Document> doc;
+                if (_getForeignAncestors) {
+                    C4Error error;
+                    doc = c4doc_get(_db, info.docID, true, &error);
+                    if (!doc) {
+                        gotDocumentError(info.docID, error, true, false);
+                        continue;   // reject rev: error getting doc
+                    }
+                    if (slice(doc->revID) != slice(info.revID))
+                        continue;   // ignore rev: there's a newer one already
                 }
+                addChangeToList(info, doc, changes);
                 // Note: we send tombstones even if the original getChanges() call specified
                 // skipDeletions. This is intentional; skipDeletions applies only to the initial
                 // dump of existing docs, not to 'live' changes.
             }
+            _maxPushedSequence = latestChangeSequence;
 
             if (!changes.empty()) {
                 markRevsSynced(changes, nullptr);
@@ -336,37 +395,35 @@ namespace litecore { namespace repl {
     }
 
 
-    void DBWorker::_connectionClosed() {
-        Worker::_connectionClosed();
-        _pusher = nullptr;                      // breaks ref-cycle
-        _changeObserver = nullptr;
+    // Common subroutine of _getChanges and dbChanged that adds a document to a list of Revs.
+    bool DBWorker::addChangeToList(const C4DocumentInfo &info, C4Document *doc, vector<Rev> &changes) {
+        alloc_slice remoteRevID;
+        if (_getForeignAncestors) {
+            // For proposeChanges, find the nearest foreign ancestor of the current rev:
+            remoteRevID = getRemoteRevID(doc);
+            if (_skipForeignChanges && remoteRevID == slice(info.revID))
+                return false;   // reject rev: it's foreign
+        }
+        changes.emplace_back(info, remoteRevID);
+        return true;
     }
 
 
     // For proposeChanges, find the latest ancestor of the current rev that is known to the server.
     // This is a rev that's either marked as foreign (came from the server), or whose sequence is
-    // prior to the checkpoint (has already been pushed to the server.)
-    bool DBWorker::getForeignAncestor(C4DocEnumerator *e,
-                                      alloc_slice &foreignAncestor,
-                                      C4Error *outError) {
+    // in the range that's already been pushed to the server.
+    alloc_slice DBWorker::getRemoteRevID(C4Document* doc) {
         Assert(_remoteDBID);
-        if (_remoteDBID) {
-            c4::ref<C4Document> doc = c4enum_getDocument(e, outError);
-            if (!doc)
-                return false;
-
-            foreignAncestor = c4doc_getRemoteAncestor(doc, _remoteDBID);
-            do {
-                slice rev(doc->selectedRev.revID);
-                if (rev == foreignAncestor) {
-                    return true;
-                } else if (doc->selectedRev.sequence < _firstChangeSequence) {
-                    foreignAncestor = rev;
-                    return true;
-                }
-            } while (c4doc_selectParentRevision(doc));
-        }
-        return true;
+        c4::sliceResult foreignAncestor( c4doc_getRemoteAncestor(doc, _remoteDBID) );
+        do {
+            slice rev(doc->selectedRev.revID);
+            if (rev == foreignAncestor) {
+                return alloc_slice(foreignAncestor);
+            } else if (doc->selectedRev.sequence <= _maxPushedSequence) {
+                return alloc_slice(rev);
+            }
+        } while (c4doc_selectParentRevision(doc));
+        return alloc_slice();
     }
 
 
@@ -406,6 +463,7 @@ namespace litecore { namespace repl {
         }
 
         MessageBuilder response(req);
+        response.compressed = true;
         response["maxHistory"_sl] = c4db_getMaxRevTreeDepth(_db);
         response["blobs"_sl] = "true"_sl;
         vector<bool> whichRequested(changes.count());
@@ -435,8 +493,8 @@ namespace litecore { namespace repl {
                     ++requested;
                     whichRequested[i] = true;
                 } else {
-                    log("Rejecting proposed change '%.*s' #%.*s (status %d)",
-                        SPLAT(docID), SPLAT(revID), status);
+                    log("Rejecting proposed change '%.*s' #%.*s, parent #%.*s (status %d)",
+                        SPLAT(docID), SPLAT(revID), SPLAT(parentRevID), status);
                     while (itemsWritten++ < i)
                         encoder.writeInt(0);
                     encoder.writeInt(status);
@@ -610,10 +668,12 @@ namespace litecore { namespace repl {
         // Now send the BLIP message:
         MessageBuilder msg("rev"_sl);
         msg.noreply = !onProgress;
-        msg.compressed = (revisionBody.size >= kMinBodySizeToCompress);
+        msg.compressed = true;
         msg["id"_sl] = request.docID;
         msg["rev"_sl] = request.revID;
         msg["sequence"_sl] = request.sequence;
+        if (request.noConflicts)
+            msg["noconflicts"_sl] = true;
         if (revisionFlags & kRevDeleted)
             msg["deleted"_sl] = "1"_sl;
         if (!history.empty())
@@ -747,7 +807,7 @@ namespace litecore { namespace repl {
                 put.docID = rev->docID;
                 put.revFlags = rev->flags | kRevKeepBody;
                 put.existingRevision = true;
-                put.allowConflict = true;
+                put.allowConflict = !rev->noConflicts;
                 put.history = history.data();
                 put.historyCount = history.size();
                 put.remoteDBID = _remoteDBID;
@@ -762,14 +822,15 @@ namespace litecore { namespace repl {
                         rev->onInserted(docErr);
                     rev = nullptr;
                 } else if (hasConflict(doc)) {
-                    // Notify that rev was inserted but caused a conflict:
+                    // Note that rev was inserted but caused a conflict:
                     log("Created conflict with '%.*s' #%.*s",
                         SPLAT(rev->docID), SPLAT(rev->revID));
-                    gotDocumentError(rev->docID, {LiteCoreDomain, kC4ErrorConflict}, false, true);
+                    rev->flags |= kRevIsConflict;
                 }
             }
         }
 
+        // Commit transaction:
         if (transaction.active() && transaction.commit(&transactionErr))
             transactionErr = { };
         else
@@ -781,9 +842,9 @@ namespace litecore { namespace repl {
                 rev->onInserted(transactionErr);
         }
 
-        if (transactionErr.code)
+        if (transactionErr.code) {
             gotError(transactionErr);
-        else {
+        } else {
             double t = st.elapsed();
             log("Inserted %zu revs in %.2fms (%.0f/sec)", revs->size(), t*1000, revs->size()/t);
         }

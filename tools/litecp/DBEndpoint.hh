@@ -1,14 +1,25 @@
 //
-//  DBEndpoint.hh
-//  LiteCore
+// DBEndpoint.hh
 //
-//  Created by Jens Alfke on 8/19/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
 #include "Endpoint.hh"
 #include "c4Replicator.h"
+#include "Stopwatch.hh"
 
 class JSONEndpoint;
 class RemoteEndpoint;
@@ -59,6 +70,9 @@ private:
 
     // Replication mode only:
     Endpoint* _otherEndpoint;
+    Stopwatch _stopwatch;
+    double _lastElapsed {0};
+    uint64_t _lastDocCount {0};
     bool _needNewline {false};
 
     static constexpr unsigned kMaxTransactionSize = 1000;

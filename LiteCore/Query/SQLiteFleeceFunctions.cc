@@ -1,17 +1,20 @@
 //
-//  SQLiteFleeceFunctions.cc
-//  LiteCore
+// SQLiteFleeceFunctions.cc
 //
-//  Created by Jens Alfke on 9/28/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "SQLite_Internal.hh"
 #include "SQLiteFleeceUtil.hh"
@@ -32,7 +35,7 @@ namespace litecore {
     static void fl_value(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
         try {
             const Value *val;
-            if (!evaluatePath(ctx, argv, &val))
+            if (!evaluatePathFromArgs(ctx, argv, true, &val))
                 return;
             setResultFromValue(ctx, val);
         } catch (const std::exception &) {
@@ -40,36 +43,41 @@ namespace litecore {
         }
     }
 
+    // fl_nested_value(fleeceData, propertyPath) -> propertyValue
+    static void fl_nested_value(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
+        try {
+            const Value *val;
+            if (!evaluatePathFromArgs(ctx, argv, false, &val))
+                return;
+            setResultFromValue(ctx, val);
+        } catch (const std::exception &) {
+            sqlite3_result_error(ctx, "fl_value: exception!", -1);
+        }
+    }
+
+
     // fl_root(body) -> fleeceData
     static void fl_root(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
         // Pull the Fleece data out of a raw document body:
         auto funcCtx = (fleeceFuncContext*)sqlite3_user_data(ctx);
         slice fleece = funcCtx->accessor(valueAsSlice(argv[0]));
-        setResultBlobFromSlice(ctx, fleece);
+        setResultBlobFromFleeceData(ctx, fleece);
     }
 
     // fl_exists(body, propertyPath) -> 0/1
     static void fl_exists(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
         const Value *val;
-        if (!evaluatePath(ctx, argv, &val))
+        if (!evaluatePathFromArgs(ctx, argv, true, &val))
             return;
         sqlite3_result_int(ctx, (val ? 1 : 0));
-    }
-
-    
-    // fl_type(body, propertyPath) -> int  (fleece::valueType, or -1 for no value)
-    static void fl_type(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
-        const Value *val;
-        if (!evaluatePath(ctx, argv, &val))
-            return;
-        setResultFromValueType(ctx, val);
+        sqlite3_result_subtype(ctx, kFleeceIntBoolean);
     }
 
     
     // fl_count(body, propertyPath) -> int
     static void fl_count(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
         const Value *val;
-        if (!evaluatePath(ctx, argv, &val))
+        if (!evaluatePathFromArgs(ctx, argv, true, &val))
             return;
         switch (val->type()) {
             case kArray:
@@ -92,7 +100,7 @@ namespace litecore {
             return;
         }
         const Value *val;
-        if (!evaluatePath(ctx, argv, &val))
+        if (!evaluatePathFromArgs(ctx, argv, true, &val))
             return;
         const Array *array = val ? val->asArray() : nullptr;
         if (!array) {
@@ -166,16 +174,55 @@ namespace litecore {
     }
 
 
+    // fl_result(value) -> value suitable for use as a result column
+    // Primarily what this does is change the various custom blob subtypes into Fleece containers
+    // that can be read by SQLiteQueryRunner::encodeColumn().
+    static void fl_result(sqlite3_context* ctx, int argc, sqlite3_value **argv) noexcept {
+        try {
+            auto arg = argv[0];
+            if (sqlite3_value_type(arg) == SQLITE_BLOB) {
+                switch (sqlite3_value_subtype(arg)) {
+                    case kFleecePointerSubtype:
+                    case kFleeceNullSubtype: {
+                        auto value = fleeceParam(ctx, arg);
+                        if (!value)
+                            return;
+                        setResultBlobFromEncodedValue(ctx, value);
+                        break;
+                    }
+                    case kFleeceDataSubtype:
+                        sqlite3_result_value(ctx, arg);
+                        break;
+                    default: {
+                        // A plain blob/data value has to be wrapped in a Fleece container to avoid
+                        // misinterpretation, since SQLiteQueryRunner will assume all blob results
+                        // are Fleece containers.
+                        Encoder enc;
+                        enc.writeData(valueAsSlice(arg));
+                        setResultBlobFromFleeceData(ctx, enc.extractOutput());
+                        break;
+                    }
+                }
+            } else {
+                sqlite3_result_value(ctx, arg);
+            }
+        } catch (const std::exception &) {
+            sqlite3_result_error(ctx, "fl_result: exception!", -1);
+        }
+    }
+
+
 #pragma mark - REGISTRATION:
 
 
     const SQLiteFunctionSpec kFleeceFunctionsSpec[] = {
-        { "fl_root",           1, fl_root  },
-        { "fl_value",          2, fl_value  },
+        { "fl_root",           1, fl_root },
+        { "fl_value",          2, fl_value },
+        { "fl_nested_value",   2, fl_nested_value },
         { "fl_exists",         2, fl_exists },
-        { "fl_type",           2, fl_type },
         { "fl_count",          2, fl_count },
         { "fl_contains",      -1, fl_contains },
+        { "fl_result",         1, fl_result },
         { }
     };
 

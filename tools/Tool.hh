@@ -1,18 +1,30 @@
 //
-//  Tool.hh
-//  LiteCore
+// Tool.hh
 //
-//  Created by Jens Alfke on 8/29/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
 #include "c4.hh"
 #include "FleeceCpp.hh"
 #include "StringUtil.hh"
+#include "ArgumentTokenizer.hh"
 #include <iostream>
 #include <string>
 #include <deque>
+#include <algorithm>
 
 using namespace std;
 using namespace fleece;
@@ -30,7 +42,7 @@ static inline C4Slice c4str(const string &s) {
 
 class Tool {
 public:
-    Tool()                                      {if (!instance) instance = this;}
+    Tool();
     virtual ~Tool();
 
     static Tool* instance;
@@ -42,7 +54,7 @@ public:
                 _args.emplace_back(argv[i]);
             processFlags(initialFlags());
             return run();
-        } catch (const fail_error &x) {
+        } catch (const fail_error &) {
             return 1;
         } catch (const std::exception &x) {
             errorOccurred(format("Uncaught C++ exception: %s", x.what()));
@@ -129,6 +141,7 @@ public:
     string ansiBold()                   {return ansi("1");}
     string ansiDim()                    {return ansi("2");}
     string ansiItalic()                 {return ansi("3");}
+    string ansiUnderline()              {return ansi("4");}
     string ansiReset()                  {return ansi("0");}
 
     string it(const char *str)          {return ansiItalic() + str + ansiReset();}
@@ -197,6 +210,8 @@ protected:
                 if (flag == "--help") {
                     usage();
                     exit(0);
+                } else if (flag == "--verbose" || flag == "-v") {
+                    ++_verbose;
                 } else if (flag == "--color") {
                     _colorMode = true;
                 } else {
@@ -219,6 +234,10 @@ protected:
         return false;
     }
 
+    void verboseFlag() {
+        ++_verbose;
+    }
+
     bool _failOnError {false};
 
 private:
@@ -229,8 +248,6 @@ private:
     string _toolPath;
     deque<string> _args;
     int _verbose {0};
-    struct editline* _editLine {nullptr};
-    struct history* _editHistory {nullptr};
-    struct tokenizer* _editTokenizer {nullptr};
     std::string _editPrompt;
+    ArgumentTokenizer _argTokenizer;
 };

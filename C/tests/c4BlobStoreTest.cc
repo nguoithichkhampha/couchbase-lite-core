@@ -1,9 +1,19 @@
 //
-//  c4BlobStoreTest.cc
-//  LiteCore
+// c4BlobStoreTest.cc
 //
-//  Created by Jens Alfke on 9/1/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "c4Test.hh"
@@ -25,7 +35,7 @@ public:
         if (encrypted) {
             fprintf(stderr, "        ...encrypted\n");
             INFO("(Encrypted)");
-            crypto.algorithm = kC4EncryptionAES256;
+            crypto.algorithm = kC4EncryptionAES128;
             memset(&crypto.bytes, 0xCC, sizeof(crypto.bytes));
             encryption = &crypto;
         }
@@ -92,7 +102,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "missing blobs", "[blob][C]") {
 }
 
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blobs", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blobs", "[blob][Encryption][C]") {
     C4Slice blobToStore = C4STR("This is a blob to store in the store!");
 
     // Add blob to the store:
@@ -135,7 +145,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blobs", "[blob][C]") {
     CHECK(memcmp(&key2, &key, sizeof(key2)) == 0);
 }
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "delete blobs", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "delete blobs", "[blob][Encryption][C]") {
     C4Slice blobToStore = C4STR("This is a blob to store in the store!");
     
     // Add blob to the store:
@@ -167,7 +177,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "delete blobs", "[blob][C]") {
     c4slice_free(p);
 }
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blob, key mismatch", "[blob][C][!throws]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blob, key mismatch", "[blob][Encryption][C][!throws]") {
     C4Slice blobToStore = C4STR("This is a blob to store in the store!");
 
     // Add blob to the store but give an expectedKey that doesn't match:
@@ -187,7 +197,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "create blob, key mismatch", "[blob][C][!t
 }
 
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "read blob with stream", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "read blob with stream", "[blob][Encryption][C]") {
     string blob = "This is a blob to store in the store!";
 
     // Add blob to the store:
@@ -231,7 +241,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "read blob with stream", "[blob][C]") {
 }
 
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blob with stream", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blob with stream", "[blob][Encryption][C]") {
     // Write the blob:
     C4Error error;
     C4WriteStream *stream = c4blob_openWriteStream(store, &error);
@@ -277,7 +287,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blob with stream", "[blob][C]") {
 }
 
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blobs of many sizes", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blobs of many sizes", "[blob][Encryption][C]") {
     // The interesting sizes for encrypted blobs are right around the file block size (4096)
     // and the cipher block size (16).
     const vector<size_t> kSizes = {0, 1, 15, 16, 17, 4095, 4096, 4097,
@@ -311,7 +321,7 @@ N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blobs of many sizes", "[blob][C]") 
 }
 
 
-N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blob and cancel", "[blob][C]") {
+N_WAY_TEST_CASE_METHOD(BlobStoreTest, "write blob and cancel", "[blob][Encryption][C]") {
     // Write the blob:
     C4Error error;
     C4WriteStream *stream = c4blob_openWriteStream(store, &error);

@@ -1,9 +1,19 @@
 //
-//  cbliteTool.hh
-//  LiteCore
+// cbliteTool.hh
 //
-//  Created by Jens Alfke on 9/8/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -12,7 +22,6 @@
 #include "FilePath.hh"
 #include "StringUtil.hh"
 #include <exception>
-#include <fnmatch.h>        // POSIX (?)
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -73,6 +82,13 @@ private:
     // revs command
     void revsUsage();
     void revsInfo();
+
+    // serve command
+    void serveUsage();
+    void serve();
+    void startListener();
+    void shareDatabase(const char *path, string name);
+    void shareDatabaseDir(const char *dirPath);
 
     // sql command
     void sqlUsage();
@@ -151,7 +167,9 @@ private:
     void existingFlag()  {_createDst = false;}
     void carefulFlag()   {_failOnError = true;}
     void jsonIDFlag()    {_jsonIDProperty = nextArg("JSON-id property");}
-
+    void replicateFlag() {_listenerConfig.apis |= kC4SyncAPI;}
+    void readonlyFlag()  {_dbFlags = (_dbFlags | kC4DB_ReadOnly) & ~kC4DB_Create;}
+    void portFlag()      {_listenerConfig.port = stoul(nextArg("port"));}
 
     static const FlagSpec kSubcommands[];
     static const FlagSpec kInteractiveSubcommands[];
@@ -159,8 +177,10 @@ private:
     static const FlagSpec kCpFlags[];
     static const FlagSpec kListFlags[];
     static const FlagSpec kQueryFlags[];
+    static const FlagSpec kServeFlags[];
 
     string _currentCommand;
+    C4DatabaseFlags _dbFlags {kC4DB_SharedKeys | kC4DB_NonObservable | kC4DB_ReadOnly};
     C4Database* _db {nullptr};
     bool _interactive {false};
     uint64_t _offset {0};
@@ -176,4 +196,7 @@ private:
     bool _showHelp {false};
     bool _createDst {true};
     alloc_slice _jsonIDProperty;
+
+    C4Listener* _listener {nullptr};
+    C4ListenerConfig _listenerConfig {};  // all false/0
 };

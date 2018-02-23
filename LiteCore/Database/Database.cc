@@ -1,17 +1,20 @@
 //
-//  Database.cc
-//  LiteCore
+// Database.cc
 //
-//  Created by Jens Alfke on 10/19/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "Database.hh"
 #include "Document.hh"
@@ -103,8 +106,12 @@ namespace c4Internal {
 
         options.encryptionAlgorithm = (EncryptionAlgorithm)config.encryptionKey.algorithm;
         if (options.encryptionAlgorithm != kNoEncryption) {
+#ifdef COUCHBASE_ENTERPRISE
             options.encryptionKey = alloc_slice(config.encryptionKey.bytes,
-                                                sizeof(config.encryptionKey.bytes));
+                                                kEncryptionKeySize[options.encryptionAlgorithm]);
+#else
+            error::_throw(error::UnsupportedEncryption);
+#endif
         }
 
         switch (config.versioning) {
@@ -159,9 +166,12 @@ namespace c4Internal {
             if (doc.bodyAsUInt() != (uint64_t)config.versioning)
                 error::_throw(error::WrongFormat);
         } else if (config.flags & kC4DB_Create) {
+            // First-time initialization:
             doc.setBodyAsUInt((uint64_t)config.versioning);
             Transaction t(*_db);
             info.write(doc, t);
+            (void)generateUUID(kPublicUUIDKey, t);
+            (void)generateUUID(kPrivateUUIDKey, t);
             t.commit();
         } else if (config.versioning != kC4RevisionTrees) {
             error::_throw(error::WrongFormat);
@@ -230,8 +240,6 @@ namespace c4Internal {
                 Warn("c4db_deleteAtPath: unknown storage engine '%s'", storageEngine);
         } else {
             factory = DataFile::factoryForFile(path);
-            if (!factory)
-                factory = DataFile::factories()[0];
         }
         if (!factory)
             error::_throw(error::WrongFormat);
@@ -290,7 +298,7 @@ namespace c4Internal {
 
             // Rekey the database itself:
             dataFile()->rekey((EncryptionAlgorithm)newKey->algorithm,
-                              slice(newKey->bytes, 32));
+                              slice(newKey->bytes, kEncryptionKeySize[newKey->algorithm]));
         } catch (...) {
             newStore->deleteStore();
             throw;
@@ -374,51 +382,54 @@ namespace c4Internal {
     }
 
 
+#pragma mark - UUIDS:
 
-    Database::UUID Database::getUUID(slice key) {
+
+    bool Database::getUUIDIfExists(slice key, UUID &uuid) {
         auto &store = getKeyStore((string)kC4InfoStore);
         Record r = store.get(key);
-        if (r.exists())
-            return *(UUID*)r.body().buf;
+        if (!r.exists() || r.body().size < sizeof(UUID))
+            return false;
+        uuid = *(UUID*)r.body().buf;
+        return true;
+    }
 
+    // must be called within a transaction
+    Database::UUID Database::generateUUID(slice key, Transaction &t, bool overwrite) {
         UUID uuid;
-        beginTransaction();
-        try {
-            Record r2 = store.get(key);
-            if (r2.exists()) {
-                uuid = *(UUID*)r2.body().buf;
-            } else {
-                // Create the UUIDs:
-                if (config.flags & kC4DB_ReadOnly)
-                    error::_throw(error::NotWriteable,
-                                  "DB has no UUIDs yet, and can't add them while opened read-only");
-                slice uuidSlice{&uuid, sizeof(uuid)};
-                GenerateUUID(uuidSlice);
-                store.set(key, uuidSlice, transaction());
-            }
-        } catch (...) {
-            endTransaction(false);
-            throw;
+        if (overwrite || !getUUIDIfExists(key, uuid)) {
+            auto &store = getKeyStore((string)kC4InfoStore);
+            slice uuidSlice{&uuid, sizeof(uuid)};
+            GenerateUUID(uuidSlice);
+            store.set(key, uuidSlice, t);
         }
-        endTransaction(true);
+        return uuid;
+    }
+
+    Database::UUID Database::getUUID(slice key) {
+        UUID uuid;
+        if (!getUUIDIfExists(key, uuid)) {
+            beginTransaction();
+            try {
+                uuid = generateUUID(key, transaction());
+            } catch (...) {
+                endTransaction(false);
+                throw;
+            }
+            endTransaction(true);
+        }
         return uuid;
     }
     
     void Database::resetUUIDs() {
-        auto &store = getKeyStore((string)kC4InfoStore);
         beginTransaction();
         try {
-            UUID uuid;
-            slice uuidSlice{&uuid, sizeof(uuid)};
-            GenerateUUID(uuidSlice);
-            store.set(kPublicUUIDKey, uuidSlice, transaction());
-            GenerateUUID(uuidSlice);
-            store.set(kPrivateUUIDKey, uuidSlice, transaction());
+            generateUUID(kPublicUUIDKey, transaction(), true);
+            generateUUID(kPrivateUUIDKey, transaction(), true);
         } catch (...) {
             endTransaction(false);
             throw;
         }
-        
         endTransaction(true);
     }
     

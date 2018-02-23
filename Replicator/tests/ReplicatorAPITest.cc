@@ -9,12 +9,15 @@
 #include "ReplicatorAPITest.hh"
 #include "c4Document+Fleece.h"
 #include "StringUtil.hh"
+#include "FleeceCpp.hh"
 
+using namespace fleeceapi;
 
 constexpr const C4Address ReplicatorAPITest::kDefaultAddress;
 constexpr const C4String ReplicatorAPITest::kScratchDBName, ReplicatorAPITest::kITunesDBName,
                          ReplicatorAPITest::kWikipedia1kDBName,
-                         ReplicatorAPITest::kProtectedDBName;
+                         ReplicatorAPITest::kProtectedDBName,
+                         ReplicatorAPITest::kImagesDBName;
 
 
 TEST_CASE("URL Parsing") {
@@ -139,6 +142,9 @@ TEST_CASE_METHOD(ReplicatorAPITest, "API Loopback Push & Pull Deletion", "[Push]
 // The tests below are tagged [.SyncServer] to keep them from running during normal testing.
 // Instead, they have to be invoked manually via Catch command-line options.
 // This is because they require that an external replication server is running.
+// The default URL the tests connect to is blip://localhost:4984/scratch/, but this can be
+// overridden by setting environment vars REMOTE_HOST, REMOTE_PORT, REMOTE_DB.
+// ** The tests will erase this database (via the SG REST API.) **
 
 TEST_CASE_METHOD(ReplicatorAPITest, "API Auth Failure", "[.SyncServer]") {
     _remoteDBName = kProtectedDBName;
@@ -303,3 +309,75 @@ TEST_CASE_METHOD(ReplicatorAPITest, "Prove Attachments", "[.SyncServer]") {
     // instead of requesting the attachment itself, since it already has the attachment.
     replicate(kC4OneShot, kC4Disabled);
 }
+
+
+TEST_CASE_METHOD(ReplicatorAPITest, "API Pull Big Attachments", "[.SyncServer]") {
+    _remoteDBName = kImagesDBName;
+    replicate(kC4Disabled, kC4OneShot);
+
+    C4Error error;
+    c4::ref<C4Document> doc = c4doc_get(db, "Abstract"_sl, true, &error);
+    REQUIRE(doc);
+    auto root = Value::fromData(doc->selectedRev.body).asDict();
+    auto sk = c4db_getFLSharedKeys(db);
+    auto attach = root.get("_attachments"_sl, sk).asDict().get("Abstract.jpg"_sl, sk).asDict();
+    REQUIRE(attach);
+    CHECK(attach.get("content_type",sk).asString() == "image/jpeg"_sl);
+    slice digest = attach.get("digest",sk).asString();
+    CHECK(digest == "sha1-9g3HeOewh8//ctPcZkh03o+A+PQ="_sl);
+    C4BlobKey blobKey;
+    c4blob_keyFromString(digest, &blobKey);
+    auto size = c4blob_getSize(c4db_getBlobStore(db, nullptr), blobKey);
+    CHECK(size == 15198281);
+}
+
+
+TEST_CASE_METHOD(ReplicatorAPITest, "API Push Conflict", "[.SyncServer]") {
+    importJSONLines(sFixturesDir + "names_100.json");
+    replicate(kC4OneShot, kC4Disabled);
+
+    sendRemoteRequest("PUT", "0000013", "{\"_rev\":\"1-3cb9cfb09f3f0b5142e618553966ab73539b8888\","
+                                          "\"serverSideUpdate\":true}"_sl);
+
+    createRev("0000013"_sl, "2-f000"_sl, kFleeceBody);
+
+    c4::ref<C4Document> doc = c4doc_get(db, C4STR("0000013"), true, nullptr);
+    REQUIRE(doc);
+    CHECK(doc->selectedRev.revID == C4STR("2-f000"));
+    CHECK(doc->selectedRev.body.size > 0);
+    REQUIRE(c4doc_selectParentRevision(doc));
+    CHECK(doc->selectedRev.revID == C4STR("1-3cb9cfb09f3f0b5142e618553966ab73539b8888"));
+    CHECK(doc->selectedRev.body.size > 0);
+    CHECK((doc->selectedRev.flags & kRevKeepBody) != 0);
+
+    C4Log("-------- Pushing Again (conflict) --------");
+    _expectedDocPushErrors = {"0000013"};
+    replicate(kC4OneShot, kC4Disabled);
+
+    C4Log("-------- Pulling --------");
+    _expectedDocPushErrors = { };
+    _expectedDocPullErrors = {"0000013"};
+    replicate(kC4Disabled, kC4OneShot);
+
+    C4Log("-------- Checking Conflict --------");
+    doc = c4doc_get(db, C4STR("0000013"), true, nullptr);
+    REQUIRE(doc);
+    CHECK((doc->flags & kDocConflicted) != 0);
+    CHECK(doc->selectedRev.revID == C4STR("2-f000"));
+    CHECK(doc->selectedRev.body.size > 0);
+    REQUIRE(c4doc_selectParentRevision(doc));
+    CHECK(doc->selectedRev.revID == C4STR("1-3cb9cfb09f3f0b5142e618553966ab73539b8888"));
+#if 0 // FIX: These checks fail due to issue #402; re-enable when fixing that bug
+    CHECK(doc->selectedRev.body.size > 0);
+    CHECK((doc->selectedRev.flags & kRevKeepBody) != 0);
+#endif
+    REQUIRE(c4doc_selectCurrentRevision(doc));
+    REQUIRE(c4doc_selectNextRevision(doc));
+    CHECK(doc->selectedRev.revID == C4STR("2-883a2dacc15171a466f76b9d2c39669b"));
+    CHECK((doc->selectedRev.flags & kRevIsConflict) != 0);
+    CHECK(doc->selectedRev.body.size > 0);
+    REQUIRE(c4doc_selectParentRevision(doc));
+    CHECK(doc->selectedRev.revID == C4STR("1-3cb9cfb09f3f0b5142e618553966ab73539b8888"));
+}
+
+

@@ -1,9 +1,6 @@
 ﻿//
 //  C4Database.cs
 //
-//  Author:
-//   Jim Borden  <jim.borden@couchbase.com>
-//
 //  Copyright (c) 2017 Couchbase, Inc All rights reserved.
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,9 +51,10 @@ namespace LiteCore.Interop
 #endif
          unsafe partial struct C4UUID
     {
-        public static readonly int Size = 32;
+        public static readonly int Size = 16;
 
-        public override int GetHashCode()
+        // NOTE: The below produces IL that is not understandable by Mono
+        /*public override int GetHashCode()
         {
             var hasher = Hasher.Start;
             fixed (byte* b = bytes) {
@@ -84,7 +82,7 @@ namespace LiteCore.Interop
             }
 
             return true;
-        }
+        }*/
     }
 
 #if LITECORE_PACKAGED

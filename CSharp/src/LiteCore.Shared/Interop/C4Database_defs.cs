@@ -1,10 +1,7 @@
 //
 // C4Database_defs.cs
 //
-// Author:
-// 	Jim Borden  <jim.borden@couchbase.com>
-//
-// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+// Copyright (c) 2018 Couchbase, Inc All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,7 +49,8 @@ namespace LiteCore.Interop
     enum C4EncryptionAlgorithm : uint
     {
         None = 0,
-        AES256 = 1
+        AES128,
+        AES256,
     }
 
 #if LITECORE_PACKAGED
@@ -63,6 +61,17 @@ namespace LiteCore.Interop
     enum C4DocumentVersioning : uint
     {
         RevisionTrees,
+    }
+
+#if LITECORE_PACKAGED
+    internal
+#else
+    public
+#endif
+    enum C4EncryptionKeySize : ulong
+    {
+        KeySizeAES128 = 16,
+        KeySizeAES256 = 32,
     }
 
 #if LITECORE_PACKAGED
@@ -96,7 +105,7 @@ namespace LiteCore.Interop
 #endif
     unsafe partial struct C4UUID
     {
-        public fixed byte bytes[32];
+        public fixed byte bytes[16];
     }
 
 #if LITECORE_PACKAGED

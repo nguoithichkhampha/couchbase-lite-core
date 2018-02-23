@@ -1,9 +1,19 @@
 //
-//  Pusher.hh
-//  LiteCore
+// Pusher.hh
 //
-//  Created by Jens Alfke on 2/13/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -11,7 +21,7 @@
 #include "DBWorker.hh"
 #include "Actor.hh"
 #include "SequenceSet.hh"
-#include <queue>
+#include <deque>
 
 namespace litecore { namespace repl {
 
@@ -49,12 +59,14 @@ namespace litecore { namespace repl {
         C4ReadStream* readBlobFromRequest(MessageIn *req, slice &digest, C4Error *outError);
         void filterByDocIDs(fleeceapi::Array docIDs);
 
-        static const unsigned kMaxPossibleAncestorsToSend = 20;
+        static const bool kChangeMessagesAreUrgent = false;   // Are change msgs high priority?
+
         static const unsigned kDefaultChangeBatchSize = 200;  // # of changes to send in one msg
-        static const unsigned kMaxChangeListsInFlight = 4;    // How many changes messages can be active at once
-        static const bool kChangeMessagesAreUrgent = true;    // Are change msgs high priority?
+        static const unsigned kMaxChangeListsInFlight = 3;    // How many changes messages can be active at once
+        static const unsigned kMaxRevsQueued = 300;           // Max number of revs waiting to be sent
         static const unsigned kMaxRevsInFlight = 5;           // max # revs to be transmitting at once
         static const unsigned kMaxRevBytesAwaitingReply = 2*1024*1024;     // max bytes of revs sent but not replied
+
         static const unsigned kDefaultMaxHistory = 20;      // If "changes" response doesn't have one
 
         Retained<DBWorker> _dbWorker;
@@ -62,8 +74,8 @@ namespace litecore { namespace repl {
         DocIDSet _docIDs;
         bool _continuous;
         bool _skipDeleted;
-        bool _proposeChanges {false};
-        bool _proposeChangesKnown {false};
+        bool _proposeChanges;
+        bool _proposeChangesKnown;
 
         C4SequenceNumber _lastSequence {0};       // Checkpointed last-sequence
         bool _gettingChanges {false};             // Waiting for _gotChanges() call?

@@ -1,4 +1,21 @@
-﻿using System;
+﻿// 
+//  Test.cs
+// 
+//  Copyright (c) 2017 Couchbase, Inc All rights reserved.
+// 
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+// 
+//  http://www.apache.org/licenses/LICENSE-2.0
+// 
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+// 
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -38,7 +55,11 @@ namespace LiteCore.Tests
 
         internal static readonly C4Slice FleeceBody;
         
+        #if COUCHBASE_ENTERPRISE
         protected override int NumberOfOptions => 2;
+        #else
+        protected override int NumberOfOptions => 1;
+        #endif
 
         private int _objectCount = 0;
 
@@ -56,7 +77,7 @@ namespace LiteCore.Tests
 
         static Test()
         {
-            #if NETCOREAPP1_0
+            #if NETCOREAPP2_0
             LoadDLL();
             #endif
             var enc = Native.FLEncoder_New();
@@ -113,7 +134,7 @@ namespace LiteCore.Tests
             C4Error err;
             config.storageEngine = C4StorageEngine.SQLite;
             if ((option & 1) == 1) {
-                config.encryptionKey.algorithm = C4EncryptionAlgorithm.AES256;
+                config.encryptionKey.algorithm = C4EncryptionAlgorithm.AES128;
                 var i = 0;
                 foreach (var b in Encoding.UTF8.GetBytes("this is not a random key at all.")) {
                     config.encryptionKey.bytes[i++] = b;

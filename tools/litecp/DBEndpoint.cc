@@ -1,9 +1,19 @@
 //
-//  DBEndpoint.cc
-//  LiteCore
+// DBEndpoint.cc
 //
-//  Created by Jens Alfke on 8/19/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "DBEndpoint.hh"
@@ -34,7 +44,7 @@ DbEndpoint::DbEndpoint(C4Database *db)
 
 
 void DbEndpoint::prepare(bool isSource, bool mustExist, slice docIDProperty, const Endpoint *other) {
-    Endpoint::prepare(isSource, mustExist, docIDProperty, other);
+    _docIDProperty = docIDProperty;
     _otherEndpoint = const_cast<Endpoint*>(other);
     if (!_db) {
         C4DatabaseConfig config = {kC4DB_SharedKeys | kC4DB_NonObservable};
@@ -115,6 +125,8 @@ void DbEndpoint::exportTo(Endpoint *dst, uint64_t limit) {
 
 // As destination of JSON file(s):
 void DbEndpoint::writeJSON(slice docID, slice json) {
+    enterTransaction();
+
     _encoder.reset();
     if (!_encoder.convertJSON(json)) {
         Tool::instance->errorOccurred(format("Couldn't parse JSON: %.*s", SPLAT(json)));
@@ -126,8 +138,6 @@ void DbEndpoint::writeJSON(slice docID, slice json) {
     alloc_slice docIDBuf;
     if (!docID && _docIDProperty)
         docID = docIDBuf = docIDFromFleece(body, json);
-
-    enterTransaction();
 
     C4DocPutRequest put { };
     put.docID = docID;
@@ -237,6 +247,7 @@ void DbEndpoint::replicate(C4Replicator *repl, C4Error &err) {
 
     c4::ref<C4Replicator> replicator = repl;
     C4ReplicatorStatus status;
+    _stopwatch.start();
     while ((status = c4repl_getStatus(replicator)).level != kC4Stopped)
         this_thread::sleep_for(chrono::milliseconds(100));
     startLine();
@@ -244,15 +255,29 @@ void DbEndpoint::replicate(C4Replicator *repl, C4Error &err) {
 
 
 void DbEndpoint::onStateChanged(C4ReplicatorStatus status) {
+    auto documentCount = status.progress.documentCount;
     if (Tool::instance->verbose()) {
         cout << "\r" << kC4ReplicatorActivityLevelNames[status.level] << " ... ";
         _needNewline = true;
-        if (status.progress.documentCount > 0)
-            cout << status.progress.documentCount << " documents ";
+        if (documentCount > 0) {
+            auto elapsed = _stopwatch.elapsed();
+            cout << documentCount << " documents (";
+            cout << int(documentCount / elapsed) << "/sec)";
+#if 0
+            auto nDocs = documentCount - _lastDocCount;
+            if (nDocs > 0) {
+                cout << "    (+" << nDocs << ", " << int(nDocs / (elapsed-_lastElapsed)) << "/sec)";
+                _lastDocCount = documentCount;
+                _lastElapsed = elapsed;
+            }
+#endif
+        }
+#if 0 // Progress estimation is too inaccurate, currently (v2.0)
         if (status.progress.unitsTotal > 0) {
             double progress = status.progress.unitsTotal ? (status.progress.unitsCompleted / (double)status.progress.unitsTotal) : 0.0;
             printf("(%.0f%%)", round(progress * 100.0));
         }
+#endif
         if (status.level == kC4Stopped)
             startLine();
         cout.flush();
@@ -266,8 +291,8 @@ void DbEndpoint::onStateChanged(C4ReplicatorStatus status) {
               message, status.error.domain, status.error.code);
     }
 
-    setDocCount(status.progress.documentCount);
-    _otherEndpoint->setDocCount(status.progress.documentCount);
+    setDocCount(documentCount);
+    _otherEndpoint->setDocCount(documentCount);
 }
 
 

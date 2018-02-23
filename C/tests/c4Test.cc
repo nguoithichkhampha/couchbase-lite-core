@@ -1,15 +1,26 @@
 //
-//  c4Test.cc
-//  Couchbase Lite Core
+// c4Test.cc
 //
-//  Created by Jens Alfke on 9/16/15.
-//  Copyright (c) 2015-2016 Couchbase. All rights reserved.
+// Copyright (c) 2015 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "c4Test.hh"
 #include "c4Document+Fleece.h"
 #include "c4Private.h"
 #include "slice.hh"
+#include "FilePath.hh"
 #include "StringUtil.hh"
 #include "Benchmark.hh"
 #include <iostream>
@@ -27,18 +38,9 @@ const std::string& TempDir() {
 
     static once_flag f;
     call_once(f, [=] {
-        const char* tmpDir = getenv("TMPDIR");
-        if (tmpDir == nullptr) {
-#ifdef _MSC_VER
-            tmpDir = "C:\\tmp";
-#else
-            tmpDir = "/tmp";
-#endif
-        }
-        string path = string(tmpDir) + kPathSeparator + "LiteCore_C_Tests" + kPathSeparator;
-
-        litecore::mkdir_u8(path.c_str(), 0700);
-        kTempDir = path;
+        auto temp = litecore::FilePath::tempDirectory()["Litecore_C_Tests/"];
+        temp.mkdir();
+        kTempDir = temp.path();
     });
 
     return kTempDir;
@@ -166,8 +168,9 @@ _versioning(kC4RevisionTrees)
 {
     static once_flag once;
     call_once(once, [] {
-        fleece::alloc_slice version = c4_getBuildInfo();
-        C4Log("This is LiteCore %.*s", SPLAT(version));
+        fleece::alloc_slice buildInfo = c4_getBuildInfo();
+        fleece::alloc_slice version = c4_getVersion();
+        C4Log("This is LiteCore %.*s ... short version %.*s", SPLAT(buildInfo), SPLAT(version));
 
         if (c4log_binaryFileLevel() == kC4LogNone) {
             string path = TempDir() + "LiteCoreAPITests.c4log";
@@ -218,8 +221,8 @@ _versioning(kC4RevisionTrees)
     }
 
     if (testOption & 1) {
-        config.encryptionKey.algorithm = kC4EncryptionAES256;
-        memcpy(config.encryptionKey.bytes, "this is not a random key at all.", 32);
+        config.encryptionKey.algorithm = kC4EncryptionAES128;
+        memcpy(config.encryptionKey.bytes, "this is not a random key at all.", 16);
     }
 
     static C4DatabaseConfig sLastConfig = { };
@@ -236,6 +239,7 @@ _versioning(kC4RevisionTrees)
     if (!c4db_deleteAtPath(databasePath(), &error))
         REQUIRE(error.code == 0);
     db = c4db_open(databasePath(), &config, &error);
+    INFO("Error " << error.domain << "/" << error.code);
     REQUIRE(db != nullptr);
 }
 
@@ -282,6 +286,18 @@ void C4Test::reopenDB() {
     REQUIRE(c4db_close(db, &error));
     c4db_free(db);
     db = nullptr;
+    db = c4db_open(databasePath(), &config, &error);
+    REQUIRE(db);
+}
+
+
+void C4Test::reopenDBReadOnly() {
+    auto config = *c4db_getConfig(db);
+    C4Error error;
+    REQUIRE(c4db_close(db, &error));
+    c4db_free(db);
+    db = nullptr;
+    config.flags = (config.flags & ~kC4DB_Create) | kC4DB_ReadOnly;
     db = c4db_open(databasePath(), &config, &error);
     REQUIRE(db);
 }
@@ -337,6 +353,7 @@ void C4Test::createFleeceRev(C4Database *db, C4Slice docID, C4Slice revID, C4Sli
     Encoder enc;
     enc.convertJSON(json);
     fleece::alloc_slice fleeceBody = enc.finish();
+    INFO("Encoder error " << enc.error());
     REQUIRE(fleeceBody);
     createRev(db, docID, revID, fleeceBody, flags);
 }
@@ -381,7 +398,7 @@ vector<C4BlobKey> C4Test::addDocWithAttachments(C4Slice docID,
     json << "{attached: [";
     for (string &attachment : attachments) {
         C4BlobKey key;
-        REQUIRE(c4blob_create(c4db_getBlobStore(db, nullptr), c4str(attachment.c_str()),
+        REQUIRE(c4blob_create(c4db_getBlobStore(db, nullptr), fleece::slice(attachment),
                               nullptr, &key,  &c4err));
         keys.push_back(key);
         C4SliceResult keyStr = c4blob_keyToString(key);
@@ -418,7 +435,7 @@ void C4Test::checkAttachment(C4Database *inDB, C4BlobKey blobKey, C4Slice expect
 
 void C4Test::checkAttachments(C4Database *inDB, vector<C4BlobKey> blobKeys, vector<string> expectedData) {
     for (unsigned i = 0; i < blobKeys.size(); ++i)
-        checkAttachment(inDB, blobKeys[i], c4str(expectedData[i].c_str()));
+        checkAttachment(inDB, blobKeys[i], fleece::slice(expectedData[i]));
 }
 
 #pragma mark - FILE IMPORT:
@@ -561,5 +578,5 @@ void C4Test::deleteDatabase(){
 
 
 const C4Slice C4Test::kDocID = C4STR("mydoc");
-const C4Slice C4Test::kBody  = C4STR("{\"name\":007}");
+const C4Slice C4Test::kBody  = C4STR("{\"name\":7}");
 C4Slice C4Test::kFleeceBody, C4Test::kEmptyFleeceBody;

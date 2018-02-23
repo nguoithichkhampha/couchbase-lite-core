@@ -1,9 +1,6 @@
 ﻿// 
 //  C4Base.cs
 // 
-//  Author:
-//  Jim Borden  <jim.borden@couchbase.com>
-// 
 //  Copyright (c) 2017 Couchbase, Inc All rights reserved.
 // 
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -255,8 +252,9 @@ namespace LiteCore.Interop
 #endif
     static partial class Native
     {
+        // NOTE: Must allocate unmanaged memory via Marshal class
         [DllImport(Constants.DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        public static extern unsafe C4LogDomain* c4log_getDomain(string name,
+        public static extern unsafe C4LogDomain* c4log_getDomain(byte* name,
             [MarshalAs(UnmanagedType.U1)] bool create);
     }
 

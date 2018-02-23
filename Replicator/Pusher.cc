@@ -1,9 +1,19 @@
 //
-//  Pusher.cc
-//  LiteCore
+// Pusher.cc
 //
-//  Created by Jens Alfke on 2/13/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 //  https://github.com/couchbase/couchbase-lite-core/wiki/Replication-Protocol
 
@@ -30,7 +40,16 @@ namespace litecore { namespace repl {
     ,_skipDeleted(options.skipDeleted())
     {
         if (passive()) {
+            // Passive replicator always sends "changes"
             _proposeChanges = false;
+            _proposeChangesKnown = true;
+        } else if (_options.properties[kC4ReplicatorOptionOutgoingConflicts].asBool()) {
+            // Outgoing conflicts allowed: try "changes" 1st, but server may force "proposeChanges"
+            _proposeChanges = false;
+            _proposeChangesKnown = false;
+        } else {
+            // Default: always send "proposeChanges"
+            _proposeChanges = true;
             _proposeChangesKnown = true;
         }
         filterByDocIDs(options.docIDs());
@@ -59,7 +78,7 @@ namespace litecore { namespace repl {
     // Begins active push, starting from the next sequence after sinceSequence
     void Pusher::_start(C4SequenceNumber sinceSequence) {
         log("Starting %spush from local seq %llu",
-            (_continuous ? "continuous " : ""), _lastSequence+1);
+            (_continuous ? "continuous " : ""), sinceSequence+1);
         _started = true;
         _pendingSequences.clear(sinceSequence);
         startSending(sinceSequence);
@@ -106,15 +125,20 @@ namespace litecore { namespace repl {
 
     // Request another batch of changes from the db, if there aren't too many in progress
     void Pusher::maybeGetMoreChanges() {
-        if (!_gettingChanges && _changeListsInFlight < kMaxChangeListsInFlight && !_caughtUp ) {
+        if (!_gettingChanges && !_caughtUp
+                             && _changeListsInFlight < kMaxChangeListsInFlight
+                             && _revsToSend.size() < kMaxRevsQueued) {
             _gettingChanges = true;
             increment(_changeListsInFlight); // will be decremented at start of _gotChanges
-            log("Reading %u changes since sequence %llu ...", _changesBatchSize, _lastSequenceRead);
-            _dbWorker->getChanges({_lastSequenceRead, _docIDs,
-                                   _changesBatchSize, _continuous,
-                                   _proposeChanges || !_proposeChangesKnown,
-                                   _skipDeleted,
-                                   _proposeChanges},
+            log("Asking DB for %u changes since sequence %llu ...",
+                _changesBatchSize, _lastSequenceRead);
+            _dbWorker->getChanges({_lastSequenceRead,
+                                   _docIDs,
+                                   _changesBatchSize,
+                                   _continuous,
+                                   _proposeChanges || !_proposeChangesKnown,  // getForeignAncestors
+                                   _skipDeleted,                              // skipDeleted
+                                   _proposeChanges},                          // skipForeign
                                   this);
             // response will be to call _gotChanges
         }
@@ -134,8 +158,10 @@ namespace litecore { namespace repl {
             return gotError(err);
         if (!changes.empty()) {
             _lastSequenceRead = changes.back().sequence;
-            log("Read %zu changes: Pusher sending 'changes' with sequences %llu - %llu",
-                  changes.size(), changes[0].sequence, _lastSequenceRead);
+            log("Found %zu changes: Pusher sending '%s' with sequences %llu - %llu",
+                changes.size(),
+                (_proposeChanges ? "proposeChanges" : "changes"),
+                changes[0].sequence, _lastSequenceRead);
         }
 
         uint64_t bodySize = 0;
@@ -241,6 +267,7 @@ namespace litecore { namespace repl {
                     if (status == 0) {
                         auto request = _revsToSend.emplace(_revsToSend.end(), change,
                                                            maxHistory, legacyAttachments);
+                        request->noConflicts = true;
                         request->ancestorRevIDs.emplace_back(change.remoteAncestorRevID);
                         queued = true;
                     } else if (status != 304) {     // 304 means server has my rev already
@@ -266,8 +293,9 @@ namespace litecore { namespace repl {
                 }
 
                 if (queued) {
-                    logVerbose("Queueing rev '%.*s' #%.*s (seq %llu)",
-                               SPLAT(change.docID), SPLAT(change.revID), change.sequence);
+                    logVerbose("Queueing rev '%.*s' #%.*s (seq %llu) [%zu queued]",
+                               SPLAT(change.docID), SPLAT(change.revID), change.sequence,
+                               _revsToSend.size());
                 } else {
                     doneWithRev(change, true);  // unqueued, so we're done with it
                 }
@@ -287,6 +315,8 @@ namespace litecore { namespace repl {
                    && !_revsToSend.empty()) {
             sendRevision(_revsToSend.front());
             _revsToSend.pop_front();
+            if (_revsToSend.size() == kMaxRevsQueued - 1)
+                maybeGetMoreChanges();          // I may now be eligible to send more changes
         }
 //        if (!_revsToSend.empty())
 //            log("Throttling sending revs; _revisionsInFlight=%u, _revisionBytesAwaitingReply=%u",
@@ -294,15 +324,16 @@ namespace litecore { namespace repl {
     }
 
     
-    // Subroutine of _gotChanges that sends a "rev" message containing a revision body.
+    // Tells the DBWorker to send a "rev" message containing a revision body.
     void Pusher::sendRevision(const RevRequest &rev)
     {
         MessageProgressCallback onProgress;
         if (!passive()) {
             // Callback for after the peer receives the "rev" message:
             increment(_revisionsInFlight);
-            logDebug("Uploading rev %.*s #%.*s (seq %llu)",
-                SPLAT(rev.docID), SPLAT(rev.revID), rev.sequence);
+            logVerbose("Uploading rev %.*s #%.*s (seq %llu) [%d/%d]",
+                       SPLAT(rev.docID), SPLAT(rev.revID), rev.sequence,
+                       _revisionsInFlight, kMaxRevsInFlight);
             onProgress = asynchronize([=](MessageProgress progress) {
                 if (progress.state == MessageProgress::kDisconnected) {
                     doneWithRev(rev, false);
@@ -351,10 +382,10 @@ namespace litecore { namespace repl {
         digest = req->property("digest"_sl);
         C4BlobKey key;
         if (!c4blob_keyFromString(digest, &key)) {
-            req->respondWithError({"BLIP"_sl, 400, "Missing or invalid 'digest'"_sl});
+            c4error_return(LiteCoreDomain, kC4ErrorInvalidParameter, "Missing or invalid 'digest'"_sl, outError);
             return nullptr;
         }
-        return  c4blob_openReadStream(_dbWorker->blobStore(), key, outError);
+        return c4blob_openReadStream(_dbWorker->blobStore(), key, outError);
     }
 
 
@@ -364,10 +395,11 @@ namespace litecore { namespace repl {
         C4Error err;
         auto blob = readBlobFromRequest(req, digest, &err);
         if (blob) {
-            log("Sending attachment %.*s", SPLAT(digest));
             increment(_blobsInFlight);
             MessageBuilder reply(req);
             reply.compressed = req->boolProperty("compress"_sl);
+            log("Sending attachment %.*s (length=%lld, compress=%d)",
+                SPLAT(digest), c4stream_getLength(blob, nullptr), reply.compressed);
             reply.dataSource = [this,blob](void *buf, size_t capacity) {
                 // Callback to read bytes from the blob into the BLIP message:
                 // For performance reasons this is NOT run on my actor thread, so it can't access

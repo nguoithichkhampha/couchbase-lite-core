@@ -1,9 +1,6 @@
 ﻿// 
 //  C4BlobStore.cs
 // 
-//  Author:
-//  Jim Borden  <jim.borden@couchbase.com>
-// 
 //  Copyright (c) 2017 Couchbase, Inc All rights reserved.
 // 
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +31,8 @@ namespace LiteCore.Interop
         private const int _Size = 20;
         // ReSharper restore InconsistentNaming
         
-        public override int GetHashCode()
+        // NOTE: The below produces IL that is not understandable by Mono
+        /*public override int GetHashCode()
         {
             var hasher = Hasher.Start;
             fixed (byte* b = bytes) {
@@ -62,7 +60,7 @@ namespace LiteCore.Interop
             }
 
             return true;
-        }
+        }*/
     }
 
 #if LITECORE_PACKAGED

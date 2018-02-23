@@ -1,9 +1,19 @@
 //
-//  cbliteTool.cc
-//  LiteCore
+// cbliteTool.cc
 //
-//  Created by Jens Alfke on 8/29/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "cbliteTool.hh"
@@ -25,6 +35,7 @@ void CBLiteTool::usage() {
     "       cblite ls " << it("[FLAGS] DBPATH [PATTERN]") << "\n"
     "       cblite query " << it("[FLAGS] DBPATH JSONQUERY") << "\n"
     "       cblite revs " << it("DBPATH DOCID") << "\n"
+    "       cblite serve " << it("DBPATH") << "\n"
     "       cblite sql " << it("DBPATH QUERY") << "\n"
     "       cblite " << it("DBPATH") << "   (interactive shell)\n"
     "           The shell accepts the same commands listed above, but without the\n"
@@ -51,14 +62,16 @@ int CBLiteTool::run() {
     c4log_setCallbackLevel(kC4LogWarning);
     clearFlags();
     if (argCount() == 0) {
-        cerr << "Missing subcommand or database path.\n"
+        cerr << ansiBold()
+             << "cblite: Couchbase Lite / LiteCore database multi-tool\n" << ansiReset() 
+             << "Missing subcommand or database path.\n"
              << "For a list of subcommands, run " << ansiBold() << "cblite help" << ansiReset() << ".\n"
              << "To start the interactive mode, run "
              << ansiBold() << "cblite " << ansiItalic() << "DBPATH" << ansiReset() << '\n';
         fail();
     }
     string cmd = nextArg("subcommand or database path");
-    if (hasSuffix(cmd, ".cblite2")) {
+    if (hasSuffix(cmd, kC4DatabaseFilenameExtension)) {
         endOfArgs();
         openDatabase(cmd);
         runInteractively();
@@ -72,7 +85,7 @@ int CBLiteTool::run() {
 
 
 void CBLiteTool::openDatabase(string path) {
-    C4DatabaseConfig config = {kC4DB_SharedKeys | kC4DB_NonObservable | kC4DB_ReadOnly};
+    C4DatabaseConfig config = {_dbFlags};
     C4Error err;
     _db = c4db_open(c4str(path), &config, &err);
     if (!_db)
@@ -111,7 +124,7 @@ void CBLiteTool::runInteractively() {
             if (!processFlag(cmd, kInteractiveSubcommands))
                 cerr << format("Unknown subcommand '%s'; type 'help' for a list of commands.\n",
                                cmd.c_str());
-        } catch (const fail_error &x) {
+        } catch (const fail_error &) {
             // subcommand failed (error message was already printed); continue
         }
     }
@@ -162,6 +175,7 @@ const Tool::FlagSpec CBLiteTool::kSubcommands[] = {
     {"ls",      (FlagHandler)&CBLiteTool::listDocsCommand},
     {"query",   (FlagHandler)&CBLiteTool::queryDatabase},
     {"revs",    (FlagHandler)&CBLiteTool::revsInfo},
+    {"serve",   (FlagHandler)&CBLiteTool::serve},
     {"sql",     (FlagHandler)&CBLiteTool::sqlQuery},
 
     {"shell",   (FlagHandler)&CBLiteTool::shell},
@@ -224,6 +238,17 @@ const Tool::FlagSpec CBLiteTool::kCpFlags[] = {
     {"-x",          (FlagHandler)&CBLiteTool::existingFlag},
     {"--jsonid",    (FlagHandler)&CBLiteTool::jsonIDFlag},
     {"--careful",   (FlagHandler)&CBLiteTool::carefulFlag},
+    {"--verbose",   (FlagHandler)&CBLiteTool::verboseFlag},
+    {"-v",          (FlagHandler)&CBLiteTool::verboseFlag},
+    {nullptr, nullptr}
+};
+
+const Tool::FlagSpec CBLiteTool::kServeFlags[] = {
+    {"--replicate", (FlagHandler)&CBLiteTool::replicateFlag},
+    {"--readonly",  (FlagHandler)&CBLiteTool::readonlyFlag},
+    {"--port",      (FlagHandler)&CBLiteTool::portFlag},
+    {"--verbose",   (FlagHandler)&CBLiteTool::verboseFlag},
+    {"-v",          (FlagHandler)&CBLiteTool::verboseFlag},
     {nullptr, nullptr}
 };
 

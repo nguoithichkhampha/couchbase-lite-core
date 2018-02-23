@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 option(CODE_COVERAGE_ENABLED "Set whether or not code coverage information should be generated" OFF)
+option(BUILD_ENTERPRISE "Set whether or not to build enterprise edition" OFF)
 
 add_definitions(-DSQLITE_OMIT_LOAD_EXTENSION        # This one's for SQLiteCpp
                 -DUSE_WEBSOCKET                     # Enables CivetWeb WebSocket support
@@ -20,17 +21,42 @@ add_definitions(-DSQLITE_OMIT_LOAD_EXTENSION        # This one's for SQLiteCpp
                 -DUSE_IPV6                          # Enable IPv6 support in CivetWeb
                 -DCMAKE                             # Let the source know this is a CMAKE build
                 -D__STDC_LIMIT_MACROS               # Ensure the presence of UINT64_MAX, etc
-                -DNOMINMAX)                         # Get rid of pesky Windows macros for min and max
+                -DNOMINMAX                          # Get rid of pesky Windows macros for min and max
+                -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1
+                -DSQLITE_LIKE_DOESNT_MATCH_BLOBS
+                -DSQLITE_OMIT_SHARED_CACHE
+                -DSQLITE_OMIT_DECLTYPE
+                -DSQLITE_OMIT_DATETIME_FUNCS
+                -DSQLITE_ENABLE_EXPLAIN_COMMENTS
+                -DSQLITE_DISABLE_FTS3_UNICODE
+                -DSQLITE_ENABLE_MEMORY_MANAGEMENT
+                -DSQLITE_ENABLE_STAT4
+                -DSQLITE_HAVE_ISNAN
+                -DHAVE_LOCALTIME_R
+                -DHAVE_USLEEP
+                -DHAVE_UTIME
+                -DSQLITE_OMIT_LOAD_EXTENSION
+                -DSQLITE_ENABLE_FTS4
+                -DDSQLITE_ENABLE_FTS3_PARENTHESIS
+                -DSQLITE_ENABLE_FTS3_TOKENIZER)
+
+if(BUILD_ENTERPRISE)
+    add_definitions(-DCOUCHBASE_ENTERPRISE)
+endif()
 
 if(MSVC)
     if(WINDOWS_STORE)
-        add_definitions(-D_WIN32_WINNT=0x0602)      # Support back to Windows 8 for Windows Store
+        add_definitions(-DSQLITE_OS_WINRT 
+                        -DMBEDTLS_NO_PLATFORM_ENTROPY
+                        -D_WIN32_WINNT=0x0602)      # Support back to Windows 8 for Windows Store
     else()
         add_definitions(-D_WIN32_WINNT=0x0601       # Support back to Windows 7 for Windows desktop
                         -DINCL_EXTRA_HTON_FUNCTIONS)# Make sure htonll is defined for WebSocketProtocol.hh
     endif()
 elseif(ANDROID)
-    add_definitions(-DLITECORE_USES_ICU=1)
+     # See: https://github.com/android-ndk/ndk/issues/477
+     # The issue is also applicable for other areas like fseeko
+     add_definitions(-DLITECORE_USES_ICU=1 -D_FILE_OFFSET_BITS=32)
 endif()
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
@@ -118,12 +144,12 @@ endif()
 include_directories("vendor/fleece/Fleece"
                     "vendor/fleece/vendor"
                     "vendor/SQLiteCpp/include"
-                    "vendor/sqlcipher/src/headers"
+                    "vendor/SQLiteCpp/sqlite3"
                     "vendor/sqlite3-unicodesn"
                     "vendor/BLIP-Cpp/include/blip_cpp"
                     "vendor/BLIP-Cpp/src/util"
                     "vendor/civetweb/include"
-                    "vendor/sqlcipher/vendor/mbedtls/include")
+                    "vendor/mbedtls/include")
 
 if(WIN32)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4099")
@@ -140,7 +166,7 @@ add_subdirectory(REST)
 add_subdirectory(vendor/fleece              EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/sqlite3-unicodesn   EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/BLIP-Cpp            EXCLUDE_FROM_ALL)
-add_subdirectory(vendor/sqlcipher           EXCLUDE_FROM_ALL)
+add_subdirectory(vendor/mbedtls             EXCLUDE_FROM_ALL)
 
 ### MORE BUILD SETTINGS:
 
@@ -212,21 +238,12 @@ set(ALL_SRC_FILES
   ${VERSIONVECTORS_SRC}
   ${C_SRC}
   ${SQLITECPP_SRC}
-  ${REPLICATOR_SRC}) 
+  ${REPLICATOR_SRC})
 
 if(MSVC)
-    include_directories("vendor/fleece/MSVC")
-    set(ALL_SRC_FILES ${ALL_SRC_FILES} 
-    MSVC/asprintf.c
-    vendor/fleece/MSVC/memmem.cc 
-    MSVC/mkstemp.cc 
-    MSVC/mkdtemp.cc 
-    MSVC/strlcat.c
-    MSVC/vasprintf-msvc.c 
-    MSVC/arc4random.cc 
-    MSVC/strptime.cc)
+	include_directories("vendor/fleece/MSVC")
 elseif(ANDROID)
-    set(ALL_SRC_FILES ${ALL_SRC_FILES} 
+    set(ALL_SRC_FILES ${ALL_SRC_FILES}
     LiteCore/Unix/strlcat.c
     LiteCore/Unix/arc4random.cc
     LiteCore/Android/unicode/ndk_icu.c)
@@ -247,13 +264,15 @@ endif()
 
 add_library(LiteCoreStatic STATIC ${ALL_SRC_FILES})
 target_compile_definitions(LiteCoreStatic PRIVATE -DLITECORE_IMPL)
+
+
+
 #if(WIN32)
 #    add_library(LiteCore SHARED MSVC/SQLiteTempDirectory.cc) #No-op for non-UWP
 #else()
 #    file(WRITE empty.cpp)
 #    add_library(LiteCore SHARED empty.cpp)
 #endif()
-
 
 #install (TARGETS LiteCore
 #         RUNTIME DESTINATION bin
@@ -268,10 +287,10 @@ endif()
 #                                LiteCoreStatic
 #                                FleeceStatic
 #                                ${NO_WHOLE_LIBRARY_FLAG}
+#                                Support
 #                                SQLite3_UnicodeSN
 #                                BLIPStatic
 #                                CivetWeb
-#                                sqlcipher
 #                                mbedcrypto)
 
 #target_link_libraries(LiteCore PRIVATE ${LITECORE_LIBRARIES_PRIVATE})
@@ -288,9 +307,8 @@ if (APPLE)
 elseif(UNIX AND NOT ANDROID)
 #    target_link_libraries(LiteCore PUBLIC z ${ICU4C_COMMON} ${ICU4C_I18N})
 elseif(ANDROID)
-   target_compile_definitions(LiteCoreStatic PUBLIC -D_CRYPTO_MBEDTLS)
-#    target_link_libraries(LiteCore PRIVATE "atomic" "log")
-    target_link_libraries(LiteCore PUBLIC z)
+    target_compile_definitions(LiteCoreStatic PUBLIC -D_CRYPTO_MBEDTLS)
+#    target_link_libraries(LiteCore PRIVATE "atomic" "log" zlibstatic)
 else()
     target_compile_definitions(LiteCoreStatic PUBLIC -DUNICODE -D_UNICODE -D_CRYPTO_MBEDTLS -D_USE_MATH_DEFINES -DLITECORE_EXPORTS -DWIN32)
     if(WINDOWS_STORE)
@@ -298,9 +316,9 @@ else()
 #        set_target_properties(LiteCore PROPERTIES COMPILE_FLAGS /ZW)
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nodefaultlib:kernel32.lib /nodefaultlib:ole32.lib")
     endif()
-#    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
-#             "/def:${PROJECT_SOURCE_DIR}/C/c4.def")
-#   target_link_libraries(LiteCore PRIVATE zlibstatic Ws2_32 Dbghelp.lib)
+    #    set_target_properties(LiteCore PROPERTIES LINK_FLAGS
+    #			  "/def:${PROJECT_SOURCE_DIR}/C/c4.def")
+    #target_link_libraries(LiteCore PRIVATE zlibstatic Ws2_32)
 endif()
 
 ### JNI:
@@ -325,36 +343,48 @@ endif()
 #    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
 #                          "-exported_symbols_list ${PROJECT_SOURCE_DIR}/REST/c4REST.exp")
 #elseif(MSVC)
-#    target_link_libraries(LiteCoreREST PUBLIC Dbghelp.lib)
+#    target_link_libraries(LiteCoreREST PUBLIC)
 #    set_target_properties(LiteCoreREST PROPERTIES LINK_FLAGS
 #              "/def:${PROJECT_SOURCE_DIR}/REST/c4REST.def")
 #elseif(ANDROID)
 #    target_link_libraries(LiteCoreREST PRIVATE "atomic" "log")
 #endif()
 
-### LITECORESERV:
+### SUPPORT LIB:
 
-#add_executable(LiteCoreServ REST/LiteCoreServ.cc)
-#target_link_libraries(LiteCoreServ PRIVATE LiteCoreREST_Static)
-#target_link_libraries(LiteCoreServ PRIVATE ${LITECORE_LIBRARIES_PRIVATE})
-#target_link_libraries(LiteCoreServ PUBLIC  ${LITECORE_LIBRARIES_PUBLIC})
-#if(APPLE)
-#  target_link_libraries(LiteCoreServ PRIVATE "-framework Foundation"
-#                                             "-framework CFNetwork"
-#                                             "-framework Security"
-#                                             z)
-#else()
-#  if(ANDROID)
-#    target_link_libraries(LiteCoreServ PRIVATE log z)
-#  elseif(MSVC)
-#    set_target_properties(LiteCoreServ PROPERTIES LINK_FLAGS
-#              "/ignore:4099")
-#    target_link_libraries(LiteCoreServ PRIVATE zlibstatic)
-#  elseif(UNIX)
-#    target_link_libraries(LiteCoreServ PRIVATE pthread z atomic dl c++abi)
-#  endif()
-#endif()
+if(MSVC)
+    set(PLATFORM_SRC 
+    MSVC/asprintf.c
+    vendor/fleece/MSVC/memmem.cc
+    MSVC/mkstemp.cc
+    MSVC/mkdtemp.cc
+    MSVC/strlcat.c
+    MSVC/vasprintf-msvc.c
+    MSVC/arc4random.cc
+    MSVC/strptime.cc
+    LiteCore/Support/PlatformIO.cc)
+elseif(ANDROID)
+    set(PLATFORM_SRC 
+    LiteCore/Unix/strlcat.c
+    LiteCore/Unix/arc4random.cc)
+elseif(UNIX AND NOT APPLE)
+    set(PLATFORM_SRC 
+    LiteCore/Unix/strlcat.c
+    LiteCore/Unix/arc4random.cc)
+endif()
 
+add_library(Support STATIC
+    C/c4ExceptionUtils.cc
+    LiteCore/Support/LibC++Debug.cc
+    LiteCore/Support/Error.cc
+    LiteCore/Support/Error_windows.cc
+    LiteCore/Support/Error_android.cc
+    LiteCore/Support/FilePath.cc
+    LiteCore/Support/Logging_Stub.cc
+    LiteCore/Support/RefCounted.cc
+    LiteCore/Support/StringUtil.cc
+    ${PLATFORM_SRC}
+)
 
 ### TOOLS:
 

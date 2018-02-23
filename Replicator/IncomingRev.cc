@@ -1,9 +1,19 @@
 //
-//  IncomingRev.cc
-//  LiteCore
+// IncomingRev.cc
 //
-//  Created by Jens Alfke on 3/30/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "IncomingRev.hh"
@@ -14,6 +24,7 @@
 #include "c4Document+Fleece.h"
 #include "BLIP.hh"
 #include <deque>
+#include <set>
 
 using namespace std;
 using namespace fleece;
@@ -52,6 +63,8 @@ namespace litecore { namespace repl {
         if (_revMessage->property("deleted"_sl))
             _rev.flags |= kRevDeleted;
         _rev.historyBuf = _revMessage->property("history"_sl);
+        _rev.noConflicts = _revMessage->boolProperty("noconflicts"_sl)
+                            || _options.noIncomingConflicts();
         slice sequence(_revMessage->property("sequence"_sl));
 
         _peerError = (int)_revMessage->intProperty("error"_sl);
@@ -170,8 +183,13 @@ namespace litecore { namespace repl {
         }
         if (_error.code == 0 && _peerError)
             _error = c4error_make(WebSocketDomain, 502, "Peer failed to send revision"_sl);
-        if (_error.code)
+        if (_error.code) {
             gotDocumentError(_rev.docID, _error, false, false);
+        } else if (_rev.flags & kRevIsConflict) {
+            // DBWorker::_insertRevision set this flag to indicate that the rev caused a conflict
+            // (though it did get inserted), so notify the delegate of the conflict:
+            gotDocumentError(_rev.docID, {LiteCoreDomain, kC4ErrorConflict}, false, true);
+        }
         _puller->revWasHandled(this, _rev.docID, remoteSequence(), (_error.code == 0));
         clear();
     }
@@ -199,6 +217,7 @@ namespace litecore { namespace repl {
 
     // Finds blob references anywhere in a Fleece value
     void IncomingRev::findBlobReferences(Dict root, FLSharedKeys sk, const FindBlobCallback &callback) {
+        set<string> found;
         Value val = root;
         deque<Value> stack;
         while(true) {
@@ -206,7 +225,8 @@ namespace litecore { namespace repl {
             if (dict) {
                 C4BlobKey blobKey;
                 if (c4doc_dictIsBlob(dict, sk, &blobKey)) {
-                    callback(dict, blobKey);
+                    if (found.emplace((const char*)&blobKey, sizeof(blobKey)).second)
+                        callback(dict, blobKey);
                 } else {
                     for (Dict::iterator i(dict); i; ++i)
                         pushIfDictOrArray(i.value(), stack);
@@ -221,6 +241,22 @@ namespace litecore { namespace repl {
                 break;
             val = stack.front();
             stack.pop_front();
+        }
+
+        // Now look for old-style _attachments:
+        auto attachments = root.get(C4STR(kC4LegacyAttachmentsProperty), sk).asDict();
+        for (Dict::iterator i(attachments); i; ++i) {
+            auto att = i.value().asDict();
+            if (att) {
+                slice digest = att.get("digest"_sl, sk).asString();
+                if (digest) {
+                    C4BlobKey blobKey;
+                    if (c4blob_keyFromString(digest, &blobKey)) {
+                        if (found.emplace((const char*)&blobKey, sizeof(blobKey)).second)
+                            callback(att, blobKey);
+                    }
+                }
+            }
         }
     }
 

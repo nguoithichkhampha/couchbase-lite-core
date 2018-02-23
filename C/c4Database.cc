@@ -1,17 +1,20 @@
 //
-//  c4Database.cc
-//  Couchbase Lite Core
+// c4Database.cc
 //
-//  Created by Jens Alfke on 9/8/15.
-//  Copyright (c) 2015-2016 Couchbase. All rights reserved.
+// Copyright (c) 2015 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "c4Internal.hh"
 #include "Database.hh"
@@ -90,8 +93,6 @@ C4Database* c4db_open(C4Slice path,
                       const C4DatabaseConfig *configP,
                       C4Error *outError) noexcept
 {
-    if (!checkParam(configP != nullptr, "missing config", outError))
-        return nullptr;
     return tryCatch<C4Database*>(outError, [=] {
         return retain(new C4Database((string)path, *configP));
     });
@@ -106,8 +107,6 @@ C4Database* c4db_retain(C4Database* db) {
 C4Database* c4db_openAgain(C4Database* db,
                            C4Error *outError) noexcept
 {
-    if (!checkParam(db != nullptr, "null database", outError))
-        return nullptr;
     string path = db->path();
     return c4db_open({path.data(), path.size()}, c4db_getConfig(db), outError);
 }

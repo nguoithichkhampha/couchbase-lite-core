@@ -1,17 +1,20 @@
 //
-//  Logging.cc
-//  LiteCore
+// Logging.cc
 //
-//  Created by Jens Alfke on 10/16/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "Logging.hh"
 #include "StringUtil.hh"
@@ -48,10 +51,8 @@ namespace litecore {
 
     LogDomain* LogDomain::sFirstDomain = nullptr;
 
-    static void defaultCallback(const LogDomain&, LogLevel, const char *message, va_list);
-
     LogLevel LogDomain::sCallbackMinLevel = LogLevel::Uninitialized;
-    static LogDomain::Callback_t sCallback = defaultCallback;
+    static LogDomain::Callback_t sCallback = LogDomain::defaultCallback;
     static bool sCallbackPreformatted = false;
     LogLevel LogDomain::sFileMinLevel = LogLevel::None;
     static ofstream *sFileOut = nullptr;
@@ -62,9 +63,10 @@ namespace litecore {
 #pragma mark - GLOBAL SETTINGS:
 
 
-    void LogDomain::setCallback(Callback_t callback, bool preformatted, LogLevel atLevel) {
+    void LogDomain::setCallback(Callback_t callback, bool preformatted) {
         unique_lock<mutex> lock(sLogMutex);
-        sCallbackMinLevel = callback ? atLevel : LogLevel::None;
+        if (!callback)
+            sCallbackMinLevel = LogLevel::None;
         sCallback = callback;
         sCallbackPreformatted = preformatted;
         _invalidateEffectiveLevels();
@@ -296,7 +298,7 @@ namespace litecore {
     }
 
     // The default logging callback writes to stderr, or on Android to __android_log_write.
-    static void defaultCallback(const LogDomain &domain, LogLevel level,
+    void LogDomain::defaultCallback(const LogDomain &domain, LogLevel level,
                                     const char *fmt, va_list args){
         #if ANDROID
             string tag("LiteCore");
@@ -339,6 +341,7 @@ namespace litecore {
 
 
     void LogDomain::unregisterObject(unsigned objectRef) {
+        unique_lock<mutex> lock(sLogMutex);
         _objNames.erase(objectRef);
     }
 

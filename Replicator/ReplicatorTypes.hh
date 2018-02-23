@@ -1,9 +1,19 @@
 //
-//  ReplicatorTypes.hh
-//  LiteCore
+// ReplicatorTypes.hh
 //
-//  Created by Jens Alfke on 3/24/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -51,6 +61,7 @@ namespace litecore { namespace repl {
         C4SequenceNumber sequence;
         uint64_t bodySize;
         C4RevisionFlags flags {0};
+        bool noConflicts {false};
 
         Rev() { }
 
@@ -85,7 +96,7 @@ namespace litecore { namespace repl {
     };
 
 
-    /** A revision I want from the peer; includes the opaque remote revision ID. */
+    /** A revision I want from the peer; includes the opaque remote sequence ID. */
     struct RequestedRev : public Rev {
         alloc_slice remoteSequence;
 

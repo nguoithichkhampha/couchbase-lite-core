@@ -1,9 +1,19 @@
 //
-//  Logging.hh
-//  LiteCore
+// Logging.hh
 //
-//  Created by Jens Alfke on 10/16/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -82,12 +92,13 @@ public:
 
     using Callback_t = void(*)(const LogDomain&, LogLevel, const char *format, va_list);
 
+    static void defaultCallback(const LogDomain&, LogLevel, const char *format, va_list);
+
     /** Registers (or unregisters) a callback to be passed log messages.
         @param callback  The callback function, or NULL to unregister.
         @param preformatted  If true, callback will be passed already-formatted log messages to be
-            displayed verbatim (and the `va_list` parameter will be NULL.)
-        @param atLevel  Only log messages at this or a higher level will be sent. */
-    static void setCallback(Callback_t callback, bool preformatted, LogLevel atLevel);
+            displayed verbatim (and the `va_list` parameter will be NULL.) */
+    static void setCallback(Callback_t callback, bool preformatted);
 
     /** Registers (or unregisters) a file to which log messages will be written in binary format.
         @param filePath  The file to write to, or an empty string to stop writing.

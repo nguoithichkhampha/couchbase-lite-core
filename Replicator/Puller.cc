@@ -1,9 +1,19 @@
 //
-//  Puller.cc
-//  LiteCore
+// Puller.cc
 //
-//  Created by Jens Alfke on 2/13/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 //  https://github.com/couchbase/couchbase-lite-core/wiki/Replication-Protocol
 
@@ -28,10 +38,10 @@ namespace litecore { namespace repl {
         registerHandler("changes",          &Puller::handleChanges);
         registerHandler("proposeChanges",   &Puller::handleChanges);
         registerHandler("rev",              &Puller::handleRev);
-        _spareIncomingRevs.reserve(kMaxSpareIncomingRevs);
+        _spareIncomingRevs.reserve(kMaxActiveIncomingRevs);
         _skipDeleted = _options.skipDeleted();
-        if (nonPassive() && options.noConflicts())
-            warn("noConflicts mode is not compatible with active pull replications!");
+        if (nonPassive() && options.noIncomingConflicts())
+            warn("noIncomingConflicts mode is not compatible with active pull replications!");
     }
 
 
@@ -93,11 +103,34 @@ namespace litecore { namespace repl {
     }
 
 
-    // Handles an incoming "changes" or "proposeChanges" message
+#pragma mark - INCOMING CHANGE LISTS:
+
+
+    // Receiving an incoming "changes" (or "proposeChanges") message
     void Puller::handleChanges(Retained<MessageIn> req) {
+        logVerbose("Received '%.*s' message %p (%u pending revs)",
+                   SPLAT(req->property("Profile"_sl)), req.get(), _pendingRevMessages);
+        _waitingChangesMessages.push_back(move(req));
+        handleMoreChanges();
+    }
+
+
+    // Process waiting "changes" messages if not throttled:
+    void Puller::handleMoreChanges() {
+        while (!_waitingChangesMessages.empty() && !_waitingForChangesCallback
+               && _pendingRevMessages + kChangesBatchSize <= kMaxActiveIncomingRevs) {
+            auto req = _waitingChangesMessages.front();
+            _waitingChangesMessages.pop_front();
+            handleChangesNow(req);
+        }
+    }
+
+
+    // Actually handle a "changes" message:
+    void Puller::handleChangesNow(Retained<MessageIn> req) {
         slice reqType = req->property("Profile"_sl);
         bool proposed = (reqType == "proposeChanges"_sl);
-        logVerbose("Handling '%.*s' message", SPLAT(reqType));
+        logVerbose("Handling '%.*s' message %p", SPLAT(reqType), req.get());
 
         auto changes = req->JSONBody().asArray();
         if (!changes && req->body() != "null"_sl) {
@@ -114,90 +147,126 @@ namespace litecore { namespace repl {
             req->respond();
         } else if (req->noReply()) {
             warn("Got pointless noreply 'changes' message");
-        } else if (_options.noConflicts() && !proposed) {
+        } else if (_options.noIncomingConflicts() && !proposed) {
             // In conflict-free mode the protocol requires the pusher send "proposeChanges" instead
             req->respondWithError({"BLIP"_sl, 409});
         } else {
             // Pass the buck to the DBWorker so it can find the missing revs & request them:
-            increment(_pendingCallbacks);
+            DebugAssert(!_waitingForChangesCallback);
+            _waitingForChangesCallback = true;
             _dbActor->findOrRequestRevs(req, asynchronize([this,req,changes](vector<bool> which) {
-                // Callback, after revs request sent:
-                decrement(_pendingCallbacks);
-                bool tracksProgress = (nonPassive() && !_options.noConflicts());
+                // Callback, after response message sent:
+                _waitingForChangesCallback = false;
                 for (size_t i = 0; i < which.size(); ++i) {
-                    if (which[i]) {
+                    bool requesting = (which[i]);
+                    if (nonPassive()) {
+                        // Add sequence to _missingSequences:
+                        auto change = changes[(unsigned)i].asArray();
+                        alloc_slice sequence(change[0].toJSON());
+                        uint64_t bodySize = requesting ? max(change[4].asUnsigned(), (uint64_t)1) : 0;
+                        if (sequence)
+                            _missingSequences.add(sequence, bodySize);
+                        else
+                            warn("Empty/invalid sequence in 'changes' message");
+                        addProgress({0, bodySize});
+                        if (!requesting)
+                            completedSequence(sequence); // Not requesting, just update checkpoint
+                    }
+                    if (requesting) {
                         increment(_pendingRevMessages);
-                        if (tracksProgress) {
-                            // Keep track of which remote sequences I just requested:
-                            auto change = changes[(unsigned)i].asArray();
-                            uint64_t bodySize = max(change[4].asUnsigned(), (uint64_t)1);
-                            alloc_slice sequence(change[0].toString()); //FIX: Should quote strings
-                            if (sequence)
-                                _missingSequences.add(sequence, bodySize);
-                            else
-                                warn("Empty/invalid sequence in 'changes' message");
-                            addProgress({0, bodySize});
-                        }
                         // now awaiting a handleRev call...
                     }
                 }
-                if (tracksProgress) {
-                    logVerbose("Now waiting for %u 'rev' messages; %zu known sequences pending",
+                if (nonPassive()) {
+                    log/*Verbose*/("Now waiting for %u 'rev' messages; %zu known sequences pending",
                                _pendingRevMessages, _missingSequences.size());
                 }
+                handleMoreChanges();  // because _waitingForChangesCallback changed
             }));
         }
     }
 
 
-    // Handles an incoming "rev" message, which contains a revision body to insert
+#pragma mark - INCOMING REVS:
+
+
+    // Received an incoming "rev" message, which contains a revision body to insert
     void Puller::handleRev(Retained<MessageIn> msg) {
+        if (_activeIncomingRevs < kMaxActiveIncomingRevs) {
+            startIncomingRev(msg);
+        } else {
+            log("Delaying handling 'rev' message for '%.*s' [%zu waiting]",
+                SPLAT(msg->property("id"_sl)), _waitingRevMessages.size()+1);//TEMP
+            _waitingRevMessages.push_back(move(msg));
+        }
+    }
+
+
+    // Actually process an incoming "rev" now:
+    void Puller::startIncomingRev(MessageIn *msg) {
         decrement(_pendingRevMessages);
+        increment(_activeIncomingRevs);
         Retained<IncomingRev> inc;
         if (_spareIncomingRevs.empty()) {
             inc = new IncomingRev(this, _dbActor);
-            logDebug("Created IncomingRev<%p>", inc.get());
         } else {
             inc = _spareIncomingRevs.back();
             _spareIncomingRevs.pop_back();
-            logDebug("Re-using IncomingRev<%p>", inc.get());
         }
-        inc->handleRev(msg);
-        increment(_pendingCallbacks);
+        inc->handleRev(msg);  // ... will call _revWasHandled when it's finished
+        handleMoreChanges();
     }
 
 
     void Puller::revWasHandled(IncomingRev *inc,
                                const alloc_slice &docID,
                                slice sequence,
-                               bool complete)
+                               bool successful)
     {
-        enqueue(&Puller::_revWasHandled, retained(inc), docID, alloc_slice(sequence), complete);
+        enqueue(&Puller::_revWasHandled, retained(inc), docID, alloc_slice(sequence), successful);
+    }
+
+
+    // Callback from an IncomingRev when it's finished (either added to db, or failed)
+    void Puller::_revWasHandled(Retained<IncomingRev> inc,
+                                alloc_slice docID,
+                                alloc_slice sequence,
+                                bool successful)
+    {
+        if (successful && nonPassive()) {
+            completedSequence(sequence);
+            finishedDocument(docID, false);
+        }
+
+        _spareIncomingRevs.push_back(inc);
+
+        decrement(_activeIncomingRevs);
+        if (_activeIncomingRevs < kMaxActiveIncomingRevs && !_waitingRevMessages.empty()) {
+            auto msg = _waitingRevMessages.front();
+            _waitingRevMessages.pop_front();
+            startIncomingRev(msg);
+        } else {
+            handleMoreChanges();
+        }
     }
 
 
     // Records that a sequence has been successfully pulled.
-    void Puller::_revWasHandled(Retained<IncomingRev> inc, alloc_slice docID, alloc_slice sequence, bool complete) {
-        decrement(_pendingCallbacks);
-        if (complete && nonPassive()) {
-            bool wasEarliest;
-            uint64_t bodySize;
-            _missingSequences.remove(sequence, wasEarliest, bodySize);
-            if (wasEarliest) {
-                _lastSequence = _missingSequences.since();
-                logVerbose("Checkpoint now at %.*s", SPLAT(_lastSequence));
-                if (replicator())
-                    replicator()->updatePullCheckpoint(_lastSequence);
-            }
-            addProgress({bodySize, 0});
-            finishedDocument(docID, false);
+    void Puller::completedSequence(alloc_slice sequence) {
+        bool wasEarliest;
+        uint64_t bodySize;
+        _missingSequences.remove(sequence, wasEarliest, bodySize);
+        if (wasEarliest) {
+            _lastSequence = _missingSequences.since();
+            logVerbose("Checkpoint now at %.*s", SPLAT(_lastSequence));
+            if (replicator())
+                replicator()->updatePullCheckpoint(_lastSequence);
         }
-
-        if (_spareIncomingRevs.size() < kMaxSpareIncomingRevs) {
-            logDebug("Recycling IncomingRev<%p>", inc.get());
-            _spareIncomingRevs.push_back(inc);
-        }
+        addProgress({bodySize, 0});
     }
+
+
+#pragma mark - STATUS / PROGRESS:
 
 
     void Puller::_childChangedStatus(Worker *task, Status status) {
@@ -207,14 +276,16 @@ namespace litecore { namespace repl {
 
     
     Worker::ActivityLevel Puller::computeActivityLevel() const {
-        logDebug("Puller activity: level=%d, _caughtUp=%d, _pendingRevMessages=%u, _pendingCallbacks=%u",
-                 Worker::computeActivityLevel(), _caughtUp, _pendingRevMessages, _pendingCallbacks);
+        logDebug("Puller activity: level=%d, _caughtUp=%d, _waitingForChangesCallback=%d, _pendingRevMessages=%u, _activeIncomingRevs=%u",
+                 Worker::computeActivityLevel(), _caughtUp, _waitingForChangesCallback,
+                 _pendingRevMessages, _activeIncomingRevs);
         if (_fatalError) {
             return kC4Stopped;
         } else if (Worker::computeActivityLevel() == kC4Busy
                 || (!_caughtUp && nonPassive())
+                || _waitingForChangesCallback
                 || _pendingRevMessages > 0
-                || _pendingCallbacks > 0) {
+                || _activeIncomingRevs > 0) {
             return kC4Busy;
         } else if (_options.pull == kC4Continuous || isOpenServer()) {
             const_cast<Puller*>(this)->_spareIncomingRevs.clear();

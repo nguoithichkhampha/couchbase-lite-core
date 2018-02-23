@@ -1,9 +1,19 @@
 //
-//  EncryptedStream.hh
-//  LiteCore
+// EncryptedStream.hh
 //
-//  Created by Jens Alfke on 9/2/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -15,7 +25,8 @@ namespace litecore {
     /** Abstract base class of EncryptedReadStream and EncryptedWriteStream. */
     class EncryptedStream {
     public:
-        static const unsigned kFileSizeOverhead = 32;
+        static constexpr size_t kKeySize = kEncryptionKeySize[kAES128];
+        static const unsigned kFileSizeOverhead = kKeySize;
         static const unsigned kFileBlockSize = 4096;
 
     protected:
@@ -25,8 +36,9 @@ namespace litecore {
                            slice nonce);
         virtual ~EncryptedStream();
 
-        uint8_t _key[32];
-        uint8_t _nonce[32];
+        EncryptionAlgorithm _alg;
+        uint8_t _key[kKeySize];
+        uint8_t _nonce[kKeySize];
         uint8_t _buffer[kFileBlockSize];    // stores partially read/written blocks across calls
         size_t _bufferPos {0};        // Indicates how much of buffer is used
         uint64_t _blockID   {0};        // Next block ID to be encrypted/decrypted (counter)

@@ -1,11 +1,19 @@
 //
-//  c4Database.h
-//  Couchbase Lite Core
+// c4Database.h
 //
-//  C API for database and document access.
+// Copyright (c) 2015 Couchbase, Inc All rights reserved.
 //
-//  Created by Jens Alfke on 9/8/15.
-//  Copyright (c) 2015-2016 Couchbase. All rights reserved.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -45,7 +53,14 @@ extern "C" {
     /** Encryption algorithms. */
     typedef C4_ENUM(uint32_t, C4EncryptionAlgorithm) {
         kC4EncryptionNone = 0,      ///< No encryption (default)
-        kC4EncryptionAES256 = 1     ///< AES with 256-bit key
+        kC4EncryptionAES128,        ///< AES with 128-bit key
+        kC4EncryptionAES256,        ///< AES with 256-bit key
+    };
+
+    /** Encryption key sizes (in bytes). */
+    typedef C4_ENUM(uint64_t, C4EncryptionKeySize) {
+        kC4EncryptionKeySizeAES128 = 16,
+        kC4EncryptionKeySizeAES256 = 32,
     };
 
     /** Encryption key specified in a C4DatabaseConfig. */
@@ -85,7 +100,7 @@ extern "C" {
 
     /** Opens a database. */
     C4Database* c4db_open(C4String path,
-                          const C4DatabaseConfig *config,
+                          const C4DatabaseConfig *config C4NONNULL,
                           C4Error *outError) C4API;
 
     /** Opens a new handle to the same database file as `db`.
@@ -99,7 +114,7 @@ extern "C" {
         happened */
     bool c4db_copy(C4String sourcePath,
                    C4String destinationPath,
-                   const C4DatabaseConfig* config,
+                   const C4DatabaseConfig* config C4NONNULL,
                    C4Error* error) C4API;
 
     /** Increments the reference count of the database handle. The next call to
@@ -114,7 +129,7 @@ extern "C" {
 
     /** Closes the database. Does not free the handle, although any operation other than
         c4db_free() will fail with an error. */
-    bool c4db_close(C4Database* database C4NONNULL, C4Error *outError) C4API;
+    bool c4db_close(C4Database* database, C4Error *outError) C4API;
 
     /** Closes the database and deletes the file/bundle. Does not free the handle, although any
         operation other than c4db_free() will fail with an error. */
@@ -163,7 +178,7 @@ extern "C" {
     void c4db_setMaxRevTreeDepth(C4Database *database C4NONNULL, uint32_t maxRevTreeDepth) C4API;
 
     typedef struct {
-        uint8_t bytes[32];
+        uint8_t bytes[16];
     } C4UUID;
 
     /** Returns the database's public and/or private UUIDs. (Pass NULL for ones you don't want.) */

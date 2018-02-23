@@ -1,5 +1,21 @@
+//
+// C4Constants.java
+//
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 package com.couchbase.litecore;
-
 
 public interface C4Constants {
     ////////////////////////////////////
@@ -15,13 +31,11 @@ public interface C4Constants {
     }
 
     interface C4LogDomain {
-        String DB = "DB";
-        String Enum = "Enum";
-        String Blob = "Blob";
-        String SQL = "SQL";
+        String Database = "DB";
+        String Query = "Query";
+        String Sync = "Sync";
+        String WebSocket = "WS";
         String BLIP = "BLIP";
-        String BLIPMessages = "BLIPMessages";
-        String ACTOR = "ACTOR";
     }
 
     ////////////////////////////////////
@@ -47,7 +61,14 @@ public interface C4Constants {
     // Encryption algorithms.
     interface C4EncryptionAlgorithm {
         int kC4EncryptionNone = 0;      ///< No encryption (default)
-        int kC4EncryptionAES256 = 1;    ///< AES with 256-bit key
+        int kC4EncryptionAES128 = 1;    ///< AES with 128-bit key
+        int kC4EncryptionAES256 = 2;    ///< AES with 256-bit key
+    }
+
+    // Encryption key sizes (in bytes).
+    interface C4EncryptionKeySize {
+        int kC4EncryptionKeySizeAES128 = 16;
+        int kC4EncryptionKeySizeAES256 = 32;
     }
 
     ////////////////////////////////////

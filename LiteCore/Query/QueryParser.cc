@@ -1,17 +1,20 @@
 //
-//  QueryParser.cc
-//  LiteCore
+// QueryParser.cc
 //
-//  Created by Jens Alfke on 10/3/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 // https://github.com/couchbase/couchbase-lite-core/wiki/JSON-Query-Schema
 
@@ -33,12 +36,15 @@ using namespace fleece;
 namespace litecore {
 
 
-    // Names of the SQLite functions we register for working with Fleece data:
+    // Names of the SQLite functions we register for working with Fleece data,
+    // in SQLiteFleeceFunctions.cc:
     static constexpr slice kValueFnName = "fl_value"_sl;
+    static constexpr slice kNestedValueFnName = "fl_nested_value"_sl;
     static constexpr slice kRootFnName  = "fl_root"_sl;
     static constexpr slice kEachFnName  = "fl_each"_sl;
     static constexpr slice kCountFnName = "fl_count"_sl;
     static constexpr slice kExistsFnName= "fl_exists"_sl;
+    static constexpr slice kResultFnName= "fl_result"_sl;
 
     // Existing SQLite FTS rank function:
     static constexpr slice kRankFnName  = "rank"_sl;
@@ -223,7 +229,7 @@ namespace litecore {
         
         if(!distinctVal) {
             for (auto &col : _baseResultColumns)
-            _sql << (nCol++ ? ", " : "") << defaultTablePrefix << col;
+                _sql << (nCol++ ? ", " : "") << defaultTablePrefix << col;
         }
 
         for (auto ftsTable : _ftsTables) {
@@ -286,7 +292,10 @@ namespace litecore {
         _context.push_back(&kExpressionListOperation); // suppresses parens around arg list
         Array::iterator items(list);
         _aggregatesOK = aggregatesOK;
-        writeColumnList(items);
+        if (key == "WHAT"_sl)
+            handleOperation(&kResultListOperation, kResultListOperation.op, items);
+        else
+            writeColumnList(items);
         _aggregatesOK = false;
         _context.pop_back();
         return count;
@@ -336,8 +345,9 @@ namespace litecore {
                                               const char *sqlKeyword) {
         auto value = getCaseInsensitive(operands, jsonKey);
         if (value) {
-            _sql << " " << sqlKeyword << " ";
+            _sql << " " << sqlKeyword << " MAX(0, ";
             parseNode(value);
+            _sql << ")";
         }
     }
 
@@ -367,22 +377,39 @@ namespace litecore {
                     require(!on, "first FROM item cannot have an ON clause");
                     _sql << " AS \"" << _aliases[i] << "\"";
                 } else {
-                    require(on, "FROM item needs an ON clause to be a join");
-                    // if (i > 1)
-                    //     _sql << ",";
-                    auto joinType = getCaseInsensitive(entry, "JOIN"_sl);
-                    if (joinType) {
-                        auto typeStr = requiredString(joinType, "JOIN value").asString();
-                        require(isValidJoinType(typeStr), "Unknown JOIN type '%s'", typeStr.c_str());
-                        _sql << " " << typeStr;
+                    JoinType joinType = kInner;
+                    const Value* joinTypeVal = getCaseInsensitive(entry, "JOIN"_sl);
+                    if (joinTypeVal) {
+                        slice joinTypeStr = requiredString(joinTypeVal, "JOIN value");
+                        joinType = JoinType(parseJoinType(joinTypeStr));
+                        require(joinType != kInvalidJoin, "Unknown JOIN type '%.*s'",
+                                SPLAT(joinTypeStr));
                     }
-                    _sql << " JOIN " << _tableName << " AS \"" << _aliases[i] << "\" ON ";
-                    if (!_includeDeleted)
-                        _sql << "(";
-                    parseNode(on);
-                    if (!_includeDeleted) {
-                        _sql << ") AND ";
-                        writeNotDeletedTest(i);
+
+                    if (joinType == kCross) {
+                        require(!on, "CROSS JOIN cannot accept an ON clause");
+                    } else {
+                        require(on, "FROM item needs an ON clause to be a join");
+                    }
+
+                    // Substitute CROSS for INNER join to work around SQLite loop-ordering (#379)
+                    _sql << " " << kJoinTypeNames[ (joinType == kInner) ? kCross : joinType ];
+                    
+                    _sql << " JOIN " << _tableName << " AS \"" << _aliases[i] << "\"";
+
+                    if (on || !_includeDeleted) {
+                        _sql << " ON ";
+                        if (on) {
+                            if (!_includeDeleted)
+                                _sql << "(";
+                            parseNode(on);
+                            if (!_includeDeleted) {
+                                _sql << ") AND ";
+                            }
+                        }
+                        if(!_includeDeleted) {
+                            writeNotDeletedTest(i);
+                        }
                     }
                 }
             }
@@ -398,12 +425,12 @@ namespace litecore {
     }
 
 
-    bool QueryParser::isValidJoinType(const string &str) {
-        for (int i = 0; i < sizeof(kJoinTypes) / sizeof(kJoinTypes[0]); ++i) {
-            if (strcasecmp(kJoinTypes[i], str.c_str()) == 0)
-                return true;
+    int /*JoinType*/ QueryParser::parseJoinType(slice str) {
+        for (int i = 0; kJoinTypeNames[i]; ++i) {
+            if (str.caseEquivalent(slice(kJoinTypeNames[i])))
+                return i;  // really returns JoinType
         }
-        return false;
+        return kInvalidJoin;
     }
 
 
@@ -502,7 +529,7 @@ namespace litecore {
     // Handles a node that's a string. It's treated as a string literal, except in the context of
     // a column-list ('FROM', 'ORDER BY', creating index, etc.) where it's a property path.
     void QueryParser::parseStringLiteral(slice str) {
-        if (_context.back() == &kColumnListOperation) {
+        if (_context.back() == &kColumnListOperation || _context.back() == &kResultListOperation) {
             require(str.size > 0 && str[0] == '.',
                     "Invalid property name '%.*s'; must start with '.'", SPLAT(str));
             str.moveStart(1);
@@ -543,6 +570,20 @@ namespace litecore {
                 _sql << op << ' ';
             }
             parseCollatableNode(i.value());
+        }
+    }
+
+
+    // Handles the WHAT clause (list of results)
+    void QueryParser::resultOp(slice op, Array::iterator& operands) {
+        int n = 0;
+        for (auto &i = operands; i; ++i) {
+            // Write the operation/delimiter between arguments
+            if (n++ > 0)
+                _sql << ", ";
+            _sql << kResultFnName << "(";
+            parseCollatableNode(i.value());
+            _sql << ")";
         }
     }
 
@@ -762,7 +803,7 @@ namespace litecore {
         if (property.empty()) {
             _sql << '_' << var << ".value";
         } else {
-            _sql << kValueFnName << "(_" << var << ".pointer, ";
+            _sql << kNestedValueFnName << "(_" << var << ".pointer, ";
             writeSQLString(_sql, slice(property));
             _sql << ")";
         }

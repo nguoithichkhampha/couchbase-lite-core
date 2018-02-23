@@ -1,9 +1,19 @@
 //
-//  LogDecoder.cc
-//  Fleece
+// LogDecoder.cc
 //
-//  Created by Jens Alfke on 5/2/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "LogDecoder.hh"
@@ -30,10 +40,9 @@ namespace litecore {
     LogDecoder::LogDecoder(std::istream &in)
     :_in(in)
     {
+        _in.exceptions(istream::badbit | istream::failbit | istream::eofbit);
         uint8_t header[6];
         _in.read((char*)&header, sizeof(header));
-        if (!_in)
-            throw runtime_error("Error reading");
         if (memcmp(&header, &LogEncoder::kMagicNumber, 4) != 0)
             throw runtime_error("Not a LiteCore log file");
         if (header[4] != LogEncoder::kFormatVersion)
@@ -50,8 +59,11 @@ namespace litecore {
         if (!_readMessage)
             readMessage();
         
+        _in.exceptions(istream::badbit | istream::failbit);  // turn off EOF exception temporarily
         if (!_in || _in.peek() < 0)
             return false;
+        _in.exceptions(istream::badbit | istream::failbit | istream::eofbit);
+
         _elapsedTicks += readUVarInt();
         _curLevel = (int8_t)_in.get();
         _curDomain = &readStringToken();

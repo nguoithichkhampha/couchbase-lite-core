@@ -1,9 +1,6 @@
 // 
 // DatabaseTest.cs
 // 
-// Author:
-//     Jim Borden  <jim.borden@couchbase.com>
-// 
 // Copyright (c) 2017 Couchbase, Inc All rights reserved.
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -308,19 +305,23 @@ namespace LiteCore.Tests
                 Native.c4db_getLastSequence(Db).Should().Be(0, "because the database is empty");
                 var publicID = new C4UUID();
                 var privateID = new C4UUID();
-                LiteCoreBridge.Check(err => {
-                    var publicID_ = publicID;
-                    var privateID_ = privateID;
-                    var retVal = Native.c4db_getUUIDs(Db, &publicID_, &privateID_, err);
-                    publicID = publicID_;
-                    privateID = privateID_;
-                    return retVal;
-                });
-
-                // Odd quirk of C# means we need an additional copy
+                C4Error err;
+                var uuidSuccess = Native.c4db_getUUIDs(Db, &publicID, &privateID, &err);
+                if (!uuidSuccess) {
+                    throw new LiteCoreException(err);
+                }
+                
                 var p1 = publicID;
                 var p2 = privateID;
-                publicID.Should().NotBe(privateID, "because public UUID and private UUID should differ");
+                var match = true;
+                for (int i = 0; i < C4UUID.Size; i++) {
+                    if (publicID.bytes[i] != privateID.bytes[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                match.Should().BeFalse("because public UUID and private UUID should differ");
                 (p1.bytes[6] & 0xF0).Should().Be(0x40, "because otherwise the UUID is non-conformant");
                 (p1.bytes[8] & 0xC0).Should().Be(0x80, "because otherwise the UUID is non-conformant");
                 (p2.bytes[6] & 0xF0).Should().Be(0x40, "because otherwise the UUID is non-conformant");
@@ -330,17 +331,15 @@ namespace LiteCore.Tests
                 ReopenDB();
                 var publicID2 = new C4UUID();
                 var privateID2 = new C4UUID();
-                LiteCoreBridge.Check(err => {
-                    var publicID_ = publicID2;
-                    var privateID_ = privateID2;
-                    var retVal = Native.c4db_getUUIDs(Db, &publicID_, &privateID_, err);
-                    publicID2 = publicID_;
-                    privateID2 = privateID_;
-                    return retVal;
-                });
+                uuidSuccess = Native.c4db_getUUIDs(Db, &publicID2, &privateID2, &err);
+                if (!uuidSuccess) {
+                    throw new LiteCoreException(err);
+                }
 
-                publicID2.Should().Be(publicID, "because the public UUID should persist");
-                privateID2.Should().Be(privateID, "because the private UUID should persist");
+                for (int i = 0; i < C4UUID.Size; i++) {
+                    publicID2.bytes[i].Should().Be(publicID.bytes[i]);
+                    privateID2.bytes[i].Should().Be(privateID.bytes[i]);
+                }
             });
         }
 
@@ -354,7 +353,7 @@ namespace LiteCore.Tests
             AssertMessage(C4ErrorDomain.LiteCoreDomain, (int)C4ErrorCode.InvalidParameter, "invalid parameter");
             AssertMessage(C4ErrorDomain.POSIXDomain, (int)PosixStatus.NOENT, "No such file or directory");
             AssertMessage(C4ErrorDomain.LiteCoreDomain, (int)C4ErrorCode.IndexBusy, "index busy; can't close view");
-            AssertMessage(C4ErrorDomain.SQLiteDomain, -1234, "unknown error");
+            AssertMessage(C4ErrorDomain.SQLiteDomain, -1234, "unknown error (-1234)");
             AssertMessage((C4ErrorDomain)666, -1234, "unknown error domain");
         }
 
@@ -604,6 +603,8 @@ namespace LiteCore.Tests
             });
         }
 
+        #if COUCHBASE_ENTERPRISE
+
         [Fact]
         public void TestDatabaseRekey()
         {
@@ -631,7 +632,7 @@ namespace LiteCore.Tests
                 // If we're on the unexcrypted pass, encrypt the db.  Otherwise, decrypt it:
                 var newKey = new C4EncryptionKey();
                 if(Native.c4db_getConfig(Db)->encryptionKey.algorithm == C4EncryptionAlgorithm.None) {
-                    newKey.algorithm = C4EncryptionAlgorithm.AES256;
+                    newKey.algorithm = C4EncryptionAlgorithm.AES128;
                     var keyBytes = Encoding.ASCII.GetBytes("a different key than default....");
                     Marshal.Copy(keyBytes, 0, (IntPtr)newKey.bytes, 32);
                 }
@@ -659,5 +660,6 @@ namespace LiteCore.Tests
                 ReopenDB();
             });
         }
+        #endif
     }
 }

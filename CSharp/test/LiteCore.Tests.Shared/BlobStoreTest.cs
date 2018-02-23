@@ -1,9 +1,6 @@
 ﻿// 
 //  BlobStoreTest.cs
 // 
-//  Author:
-//   Jim Borden  <jim.borden@couchbase.com>
-// 
 //  Copyright (c) 2017 Couchbase, Inc All rights reserved.
 // 
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +44,12 @@ namespace LiteCore.Tests
 
         }
 #endif
+
+        #if COUCHBASE_ENTERPRISE
         protected override int NumberOfOptions => 2;
+        #else
+        protected override int NumberOfOptions => 1;
+        #endif
 
         private bool _encrypted;
         private C4BlobStore* _store;
@@ -60,7 +62,7 @@ namespace LiteCore.Tests
             C4EncryptionKey *encryption = null;
             if(_encrypted) {
                 WriteLine("        ...encrypted");
-                crypto.algorithm = C4EncryptionAlgorithm.AES256;
+                crypto.algorithm = C4EncryptionAlgorithm.AES128;
                 for(int i = 0; i < 32; i++) {
                     crypto.bytes[i] = 0xcc;
                 }
@@ -168,7 +170,10 @@ namespace LiteCore.Tests
                 LiteCoreBridge.Check(err => {
                     return Native.c4blob_create(_store, blobToStore, null, localKey, err);
                 });
-                key.Equals(key2).Should().BeTrue("because the two keys are for the same attachment");
+
+                for (int i = 0; i < C4BlobKey.Size; i++) {
+                    key.bytes[i].Should().Be(key2.bytes[i]);
+                }
             });
         }
 

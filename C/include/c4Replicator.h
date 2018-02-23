@@ -1,9 +1,19 @@
 //
-//  c4Replicator.h
-//  LiteCore
+// c4Replicator.h
 //
-//  Created by Jens Alfke on 2/17/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #pragma once
@@ -37,7 +47,7 @@ extern "C" {
         kC4Busy
     };
 
-    extern const char* const kC4ReplicatorActivityLevelNames[5];
+    CBL_CORE_API extern const char* const kC4ReplicatorActivityLevelNames[5];
 
 
     typedef struct {
@@ -160,9 +170,11 @@ extern "C" {
     #define kC4ReplicatorOptionFilter         "filter"   // Filter name; string
     #define kC4ReplicatorOptionFilterParams   "filterParams"  // Filter params; Dict[string]
     #define kC4ReplicatorOptionSkipDeleted    "skipDeleted" // Don't push/pull tombstones; bool
-    #define kC4ReplicatorOptionNoConflicts    "noConflicts" // Puller rejects conflicts; bool
+    #define kC4ReplicatorOptionNoIncomingConflicts "noIncomingConflicts" // Reject incoming conflicts; bool
+    #define kC4ReplicatorOptionOutgoingConflicts "outgoingConflicts" // Allow creating conflicts on remote; bool
     #define kC4ReplicatorCheckpointInterval   "checkpointInterval" // How often to checkpoint, in seconds; number
     #define kC4ReplicatorOptionRemoteDBUniqueID "remoteDBUniqueID" // Stable ID for remote db with unstable URL; string
+    #define kC4ReplicatorHeartbeatInterval    "heartbeat" // Interval in secs to send a keepalive ping
 
     // Auth dictionary keys:
     #define kC4ReplicatorAuthType       "type"           // Auth property; string

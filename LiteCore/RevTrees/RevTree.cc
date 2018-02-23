@@ -1,17 +1,20 @@
 //
-//  RevTree.cc
-//  Couchbase Lite Core
+// RevTree.cc
 //
-//  Created by Jens Alfke on 5/13/14.
-//  Copyright (c) 2014-2016 Couchbase. All rights reserved.
+// Copyright (c) 2014 Couchbase, Inc All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
-//  except in compliance with the License. You may obtain a copy of the License at
-//    http://www.apache.org/licenses/LICENSE-2.0
-//  Unless required by applicable law or agreed to in writing, software distributed under the
-//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-//  either express or implied. See the License for the specific language governing permissions
-//  and limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include "RevTree.hh"
 #include "RawRevTree.hh"
@@ -335,7 +338,7 @@ namespace litecore {
     }
 
     void RevTree::removeBody(const Rev* rev) {
-        if (rev->flags & Rev::kKeepBody) {
+        if (rev->body()) {
             const_cast<Rev*>(rev)->removeBody();
             _changed = true;
         }
@@ -421,6 +424,14 @@ namespace litecore {
             }
         }
         _revs.resize(dst - _revs.begin());
+
+        // Remove purged revs from _remoteRevs:
+        auto tempRemoteRevs = _remoteRevs;
+        for (auto &e : tempRemoteRevs) {
+            if (e.second->isMarkedForPurge())
+                _remoteRevs.erase(e.first);
+        }
+
         _changed = true;
     }
 
@@ -512,6 +523,12 @@ namespace litecore {
         for (Rev *rev : _revs) {
             out << "\t" << (++i) << ": ";
             rev->dump(out);
+
+            for (auto &e : _remoteRevs) {
+                if (e.second == rev)
+                    out << " <--remote#" << e.first;
+            }
+
             out << "\n";
         }
     }

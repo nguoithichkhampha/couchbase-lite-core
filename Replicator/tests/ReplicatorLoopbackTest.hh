@@ -31,7 +31,6 @@ using namespace litecore::websocket;
 class ReplicatorLoopbackTest : public C4Test, Replicator::Delegate {
 public:
     static constexpr duration kLatency              = chrono::milliseconds(5);
-    static constexpr duration kCheckpointSaveDelay  = chrono::milliseconds(500);
 
 
     ReplicatorLoopbackTest()
@@ -44,6 +43,7 @@ public:
         if (_parallelThread)
             _parallelThread->join();
         _replClient = _replServer = nullptr;
+        CHECK(WebSocket::gInstanceCount == 0);
         C4Error error;
         c4db_delete(db2, &error);
         c4db_free(db2);
@@ -105,6 +105,10 @@ public:
 
     void runPullReplication(C4ReplicatorMode mode =kC4OneShot) {
         runReplicators(Replicator::Options::passive(), Replicator::Options::pulling(mode));
+    }
+
+    void runPushPullReplication(C4ReplicatorMode mode =kC4OneShot) {
+        runReplicators(Replicator::Options(mode, mode), Replicator::Options::passive());
     }
 
     virtual void replicatorGotHTTPResponse(Replicator *repl, int status,
@@ -203,6 +207,25 @@ public:
             }
             Log("-------- Done creating docs --------");
             _expectedDocumentCount = docNo - 1;
+            _stopOnIdle = true;
+        });
+    }
+
+    void addRevsInParallel(duration interval, alloc_slice docID, int firstRev, int totalRevs) {
+        runInParallel([=](C4Database *bgdb) {
+            for (int i = 0; i < totalRevs; i++) {
+                int revNo = firstRev + i;
+                this_thread::sleep_for(interval);
+                Log("-------- Creating rev %.*s # %d --------", SPLAT(docID), revNo);
+                c4::Transaction t(bgdb);
+                C4Error err;
+                Assert(t.begin(&err));
+                char revID[20];
+                sprintf(revID, "%d-ffff", revNo);
+                createRev(bgdb, docID, c4str(revID), kFleeceBody);
+                Assert(t.commit(&err));
+            }
+            Log("-------- Done creating revs --------");
             _stopOnIdle = true;
         });
     }

@@ -1,43 +1,29 @@
-/*
-* Copyright (c) 1995, 1996, 1997 Kungliga Tekniska Högskolan
-* (Royal Institute of Technology, Stockholm, Sweden).
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-*
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-*
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* 3. Neither the name of the Institute nor the names of its contributors
-*    may be used to endorse or promote products derived from this software
-*    without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-* SUCH DAMAGE.
-*/
+//
+// mkstemp.cc
+//
+// Copyright (c) 2018 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-#include <errno.h>
+
 #include <cstring>
-#include <Windows.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <io.h>
 #include <atlbase.h>
+#include "TempArray.hh"
+#include "arc4random.h"
+#include <Error.hh>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -47,29 +33,39 @@
 
 #ifndef HAVE_MKSTEMP
 
+const char letter_choices[63] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+static char* mktemp_internal(char* templ)
+{
+    char* start = strchr(templ, '\0');
+    while(*(--start) == 'X') {
+	    const uint32_t r = arc4random_uniform(62);
+		Assert(r < 62);
+		*start = letter_choices[r];
+    }
+
+    return templ;
+}
+
 int mkstemp(char *tmp)
 {
-    char		*start, *cp;
-    unsigned	 int tries;
+	const size_t len = strnlen_s(tmp, MAX_PATH + 1) + 1;
+	TempArray(cp, char, len);
+	strcpy_s(cp, len, tmp);
+    
+	struct _stat64i32 buf{};
+	for(int i = 0; i < INT32_MAX; i++) {
+		mktemp_internal(tmp);
+		const CA2WEX<256> wpath(tmp, CP_UTF8);
+		if(_wstat64i32(wpath, &buf) != 0) {
+			const int fd = _wopen(wpath, O_RDWR | O_CREAT | O_EXCL | O_BINARY, _S_IREAD | _S_IWRITE);
+			if (fd >= 0 || errno != EEXIST) {
+				return fd;
+			}
+		} 
 
-    start = strchr(tmp, '\0');
-    while (start > tmp && start[-1] == 'X')
-        start--;
-
-    for (tries = INT_MAX; tries; tries--) {
-        if (_mktemp(tmp) == NULL) {
-            errno = EEXIST;
-            return NULL;
-        }
-        CA2WEX<256> wpath(tmp, CP_UTF8);
-        int fd = _wopen(wpath, O_RDWR | O_CREAT | O_EXCL | O_BINARY, _S_IREAD | _S_IWRITE);
-        if (fd >= 0 || errno != EEXIST) {
-            return fd;
-        }
-
-        for (cp = start; *cp != '\0'; cp++)
-            *cp = 'X';
-    }
+		strcpy_s(tmp, len, cp);
+	}
 
     errno = EEXIST;
     return -1;

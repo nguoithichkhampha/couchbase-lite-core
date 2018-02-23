@@ -1,16 +1,20 @@
-/**
- * Copyright (c) 2017 Couchbase, Inc. All rights reserved.
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- */
+//
+// C4QueryEnumerator.java
+//
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 package com.couchbase.litecore;
 
 import com.couchbase.litecore.fleece.FLArrayIterator;
@@ -81,6 +85,10 @@ public class C4QueryEnumerator {
         return new FLArrayIterator(getColumns(_handle));
     }
 
+    public long getMissingColumns() {
+        return getMissingColumns(_handle);
+    }
+
     public long getFullTextMatchCount() {
         return getFullTextMatchCount(_handle);
     }
@@ -115,13 +123,27 @@ public class C4QueryEnumerator {
     static native void free(long handle);
 
     // -- Accessor methods to C4QueryEnumerator --
+    // C4QueryEnumerator
+    // A query result enumerator
+    // Created by c4db_query. Must be freed with c4queryenum_free.
+    // The fields of this struct represent the current matched index row, and are valid until the
+    // next call to c4queryenum_next or c4queryenum_free.
 
-    // C4QueryEnumerator.columns
+    // FLArrayIterator columns
+    // The columns of this result, in the same order as in the query's `WHAT` clause.
     static native long getColumns(long handle);
 
-    // C4QueryEnumerator.fullTextMatchCount
+    // uint64_t missingColumns
+    // A bitmap where a 1 bit represents a column whose value is MISSING.
+    // This is how you tell a missing property value from a value that's JSON 'null',
+    // since the value in the `columns` array will be a Fleece `null` either way.
+    static native long getMissingColumns(long handle);
+
+    // uint32_t fullTextMatchCount
+    // The number of full-text matches (i.e. the number of items in `fullTextMatches`)
     static native long getFullTextMatchCount(long handle);
 
-    // C4QueryEnumerator.fullTextMatches
+    // const C4FullTextMatch *fullTextMatches
+    // Array with details of each full-text match
     static native long getFullTextMatch(long handle, int idx);
 }

@@ -1,9 +1,19 @@
 //
-//  IncomingBlob.cc
-//  LiteCore
+// IncomingBlob.cc
 //
-//  Created by Jens Alfke on 4/4/17.
-//  Copyright © 2017 Couchbase. All rights reserved.
+// Copyright (c) 2017 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "IncomingBlob.hh"
@@ -25,8 +35,8 @@ namespace litecore { namespace repl {
         _key = key;
         _size = size;
         alloc_slice digest = c4blob_keyToString(_key);
-        logVerbose("Requesting blob %.*s (%llu bytes)", SPLAT(digest), _size);
-
+        logVerbose("Requesting blob %.*s (%llu bytes, compress=%d)",
+                   SPLAT(digest), _size, compress);
         C4Error err;
         _writer = c4blob_openWriteStream(_blobStore, &err);
         if (!_writer)
@@ -36,7 +46,8 @@ namespace litecore { namespace repl {
 
         MessageBuilder req("getAttachment"_sl);
         req["digest"_sl] = digest;
-        req.compressed = compress;
+        if (compress)
+            req["compress"_sl] = "true"_sl;
         sendRequest(req, asynchronize([=](blip::MessageProgress progress) {
             //... After request is sent:
             if (_writer) {

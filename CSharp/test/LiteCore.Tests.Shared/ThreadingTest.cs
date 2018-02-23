@@ -1,3 +1,20 @@
+// 
+//  ThreadingTest.cs
+// 
+//  Copyright (c) 2017 Couchbase, Inc All rights reserved.
+// 
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+// 
+//  http://www.apache.org/licenses/LICENSE-2.0
+// 
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+// 
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -65,32 +82,36 @@ namespace LiteCore.Tests
             var database = OpenDB();
             var observer = Native.c4dbobs_create(database, ObsCallback, this);
             var lastSequence = 0UL;
-            do {
-                lock (_observerMutex) {
-                    if (!_changesToObserve) {
-                        continue;
+
+            try {
+                do {
+                    lock (_observerMutex) {
+                        if (!_changesToObserve) {
+                            continue;
+                        }
+
+                        Write("8");
+                        _changesToObserve = false;
                     }
 
-                    Write("8");
-                    _changesToObserve = false;
-                }
-
-                var changes = new C4DatabaseChange[10];
-                uint nDocs;
-                bool external;
-                while (0 < (nDocs = Native.c4dbobs_getChanges(observer.Observer, changes, 10U, &external))) {
-                    external.Should().BeTrue("because all changes will be external in this test");
-                    for (int i = 0; i < nDocs; ++i) {
-                        changes[i].docID.CreateString().Should().StartWith("doc-", "because otherwise the document ID is not what we created");
-                        lastSequence = changes[i].sequence;
+                    var changes = new C4DatabaseChange[10];
+                    uint nDocs;
+                    bool external;
+                    while (0 < (nDocs = Native.c4dbobs_getChanges(observer.Observer, changes, 10U, &external))) {
+                        external.Should().BeTrue("because all changes will be external in this test");
+                        for (int i = 0; i < nDocs; ++i) {
+                            changes[i].docID.CreateString().Should().StartWith("doc-",
+                                "because otherwise the document ID is not what we created");
+                            lastSequence = changes[i].sequence;
+                        }
                     }
-                }
 
-                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
-            } while (lastSequence < NumDocs);
-
-            observer.Dispose();
-            CloseDB(database);
+                    Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+                } while (lastSequence < NumDocs);
+            } finally {
+                observer.Dispose();
+                CloseDB(database);
+            }
         }
 
         private static void ObsCallback(C4DatabaseObserver* observer, object context)

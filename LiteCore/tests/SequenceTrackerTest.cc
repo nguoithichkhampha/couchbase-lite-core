@@ -1,9 +1,19 @@
 //
-//  SequenceTrackerTest.cc
-//  LiteCore
+// SequenceTrackerTest.cc
 //
-//  Created by Jens Alfke on 11/1/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "LiteCoreTest.hh"
@@ -312,16 +322,37 @@ TEST_CASE("SequenceTracker Transaction", "[notification]") {
         CHECK(countD == 1);
     }
 }
-#define FOO(x) 
+
+
+TEST_CASE_METHOD(litecore::SequenceTrackerTest, "SequenceTracker Ignores ExternalChanges", "[notification]") {
+    SequenceTracker track2;
+    track2.beginTransaction();
+    track2.documentChanged("B"_asl, "2-bb"_asl, ++seq, 4444);
+    track2.documentChanged("Z"_asl, "1-ff"_asl, ++seq, 5555);
+
+    // Notify tracker about the transaction from track2:
+    tracker.addExternalTransaction(track2);
+    track2.endTransaction(true);
+
+    // tracker ignored the changes because it has no observers:
+    CHECK_IF_DEBUG(tracker.dump() == "[]");
+}
 
 
 TEST_CASE_METHOD(litecore::SequenceTrackerTest, "SequenceTracker ExternalChanges", "[notification]") {
+    // Add a change notifier:
+    int count1 = 0;
+    DatabaseChangeNotifier cn(tracker, [&](DatabaseChangeNotifier&) {++count1;}, 0);
+
     // Add some docs:
     tracker.beginTransaction();
     tracker.documentChanged("A"_asl, "1-aa"_asl, ++seq, 1111);
     tracker.documentChanged("B"_asl, "1-bb"_asl, ++seq, 2222);
     tracker.documentChanged("C"_asl, "1-cc"_asl, ++seq, 3333);
     tracker.endTransaction(true);
+
+    // notifier was notified:
+    CHECK(count1 == 1);
 
     SequenceTracker track2;
     track2.beginTransaction();
@@ -332,9 +363,12 @@ TEST_CASE_METHOD(litecore::SequenceTrackerTest, "SequenceTracker ExternalChanges
     tracker.addExternalTransaction(track2);
     track2.endTransaction(true);
 
-    CHECK_IF_DEBUG(tracker.dump() == "[A@1, C@3, B@4', Z@5']");
+    // tracker added the changes because it has an observer:
+    CHECK_IF_DEBUG(tracker.dump() == "[*, A@1, C@3, B@4', Z@5']");
 
-    DatabaseChangeNotifier cn(tracker, nullptr, 0);
+    // notifier wasn't up to date before the transaction, so its callback didn't get called again:
+    CHECK(count1 == 1);
+
     SequenceTracker::Change changes[10];
     bool external;
     size_t numChanges = cn.readChanges(changes, 10, external);

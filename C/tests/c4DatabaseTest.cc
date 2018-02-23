@@ -1,9 +1,19 @@
 //
-//  c4DatabaseTest.cc
-//  Couchbase Lite Core
+// c4DatabaseTest.cc
 //
-//  Created by Jens Alfke on 9/14/15.
-//  Copyright (c) 2015-2016 Couchbase. All rights reserved.
+// Copyright (c) 2015 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "c4Test.hh"
@@ -66,10 +76,12 @@ N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database ErrorMessages", "[Database][C]"
     REQUIRE(buf[0] == '\0');
 
     assertMessage(SQLiteDomain, SQLITE_CORRUPT, "database disk image is malformed");
+    assertMessage(SQLiteDomain, SQLITE_IOERR_ACCESS, "disk I/O error (3338)");
+    assertMessage(SQLiteDomain, SQLITE_IOERR, "disk I/O error");
     assertMessage(LiteCoreDomain, 15, "invalid parameter");
     assertMessage(POSIXDomain, ENOENT, "No such file or directory");
     assertMessage(LiteCoreDomain, kC4ErrorIndexBusy, "index busy; can't close view");
-    assertMessage(SQLiteDomain, -1234, "unknown error");
+    assertMessage(SQLiteDomain, -1234, "unknown error (-1234)");
     assertMessage((C4ErrorDomain)666, -1234, "unknown error domain");
 }
 
@@ -93,6 +105,29 @@ N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Info", "[Database][C]") {
     REQUIRE(c4db_getUUIDs(db, &publicUUID2, &privateUUID2, &err));
     REQUIRE(memcmp(&publicUUID, &publicUUID2, sizeof(C4UUID)) == 0);
     REQUIRE(memcmp(&privateUUID, &privateUUID2, sizeof(C4UUID)) == 0);
+}
+
+
+N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database deletion lock", "[Database][C]") {
+    ExpectingExceptions x;
+    C4Error err;
+    REQUIRE(!c4db_deleteAtPath(databasePath(), &err));
+    CHECK(err.domain == LiteCoreDomain);
+    CHECK(err.code == kC4ErrorBusy);
+
+    auto equivalentPath = databasePathString() + kPathSeparator;
+    REQUIRE(!c4db_deleteAtPath(fleece::slice(equivalentPath), &err));
+    CHECK(err.domain == LiteCoreDomain);
+    CHECK(err.code == kC4ErrorBusy);
+}
+
+
+N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Read-Only UUIDs", "[Database][C]") {
+    // Make sure UUIDs are available even if the db is opened read-only when they're first accessed.
+    reopenDBReadOnly();
+    C4Error err;
+    C4UUID publicUUID, privateUUID;
+    REQUIRE(c4db_getUUIDs(db, &publicUUID, &privateUUID, &err));
 }
 
 
@@ -183,8 +218,8 @@ N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database CreateRawDoc", "[Database][C]")
     REQUIRE(error.code == (int)kC4ErrorNotFound);
 }
 
-
-N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Rekey", "[Database][blob][C]") {
+#ifdef COUCHBASE_ENTERPRISE
+N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Rekey", "[Database][Encryption][blob][C]") {
     createNumberedDocs(99);
 
     // Add blob to the store:
@@ -202,7 +237,7 @@ N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Rekey", "[Database][blob][C]") 
     // If we're on the unencrypted pass, encrypt the db. Otherwise decrypt it:
     C4EncryptionKey newKey = {kC4EncryptionNone, {}};
     if (c4db_getConfig(db)->encryptionKey.algorithm == kC4EncryptionNone) {
-        newKey.algorithm = kC4EncryptionAES256;
+        newKey.algorithm = kC4EncryptionAES128;
         memcpy(newKey.bytes, "a different key than default....", 32);
         REQUIRE(c4db_rekey(db, &newKey, &error));
     } else {
@@ -221,6 +256,7 @@ N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database Rekey", "[Database][blob][C]") 
     REQUIRE(memcmp(c4db_getConfig(db)->encryptionKey.bytes, newKey.bytes, 32) == 0);
     reopenDB();
 }
+#endif
 
 
 N_WAY_TEST_CASE_METHOD(C4DatabaseTest, "Database AllDocs", "[Database][C]") {

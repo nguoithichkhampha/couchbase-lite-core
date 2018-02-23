@@ -1,13 +1,24 @@
 //
-//  SequenceTracker.cc
-//  LiteCore
+// SequenceTracker.cc
 //
-//  Created by Jens Alfke on 10/31/16.
-//  Copyright © 2016 Couchbase. All rights reserved.
+// Copyright (c) 2016 Couchbase, Inc All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #include "SequenceTracker.hh"
 #include "Document.hh"
+#include "Logging.hh"
 #include <algorithm>
 #include <sstream>
 
@@ -39,8 +50,16 @@ namespace litecore {
 
     static const size_t kMinChangesToKeep = 100;
 
+    LogDomain ChangesLog("Changes", LogLevel::Warning);
+
+
+    SequenceTracker::SequenceTracker()
+    :Logging(ChangesLog)
+    { }
+
 
     void SequenceTracker::beginTransaction() {
+        log("begin transaction at #%llu", _lastSequence);
         auto notifier = new DatabaseChangeNotifier(*this, nullptr);
         Assert(!inTransaction());
         _transaction.reset(notifier);
@@ -53,6 +72,7 @@ namespace litecore {
         Assert(inTransaction());
 
         if (commit) {
+            log("commit: sequences #%llu -- #%llu", _preTransactionLastSequence, _lastSequence);
             // Bump their committedSequences:
             for (auto entry = next(_transaction->_placeholder); entry != _changes.end(); ++entry) {
                 if (!entry->isPlaceholder()) {
@@ -61,6 +81,7 @@ namespace litecore {
             }
 
         } else {
+            log("abort: from seq #%llu back to #%llu", _lastSequence, _preTransactionLastSequence);
             _lastSequence = _preTransactionLastSequence;
 
             // Revert their committedSequences:
@@ -138,7 +159,7 @@ namespace litecore {
         for (auto docNotifier : entry->documentObservers)
             docNotifier->notify(entry);
 
-        if (listChanged) {
+        if (listChanged && _numPlaceholders > 0) {
             // Any placeholders right before this change were up to date, should be notified:
             bool notified = false;
             auto ph = next(_changes.rbegin());      // iterating _backwards_, skipping latest
@@ -160,9 +181,16 @@ namespace litecore {
     void SequenceTracker::addExternalTransaction(const SequenceTracker &other) {
         Assert(!inTransaction());
         Assert(other.inTransaction());
-        for (auto e = next(other._transaction->_placeholder); e != other._changes.end(); ++e) {
-            _lastSequence = e->sequence;
-            _documentChanged(e->docID, e->revID, e->sequence, e->bodySize);
+        if (!_changes.empty() || _numDocObservers > 0) {
+            log("addExternalTransaction from %s", other.loggingIdentifier().c_str());
+            for (auto e = next(other._transaction->_placeholder); e != other._changes.end(); ++e) {
+                _lastSequence = e->sequence;
+                _documentChanged(e->docID, e->revID, e->sequence, e->bodySize);
+            }
+            
+            // See https://github.com/couchbase/couchbase-lite-core/issues/418
+            // Evaluate if this is needed here
+            //removeObsoleteEntries();
         }
     }
 
@@ -217,7 +245,8 @@ namespace litecore {
                     external = i->external;
                 else if (i->external != external)
                     break;
-                changes[n++] = {i->docID, i->revID, i->sequence, i->bodySize};
+                Change change = {i->docID, i->revID, i->sequence, i->bodySize};
+                changes[n++] = change;
             }
             ++i;
         }
@@ -234,12 +263,16 @@ namespace litecore {
         if (inTransaction())
             return;
         // Any changes before the first placeholder aren't going to be seen, so remove them:
+        size_t nRemoved = 0;
         while (_changes.size() - _numPlaceholders > kMinChangesToKeep
                     && !_changes.front().isPlaceholder()) {
             _byDocID.erase(_changes.front().docID);
             _changes.erase(_changes.begin());
+            ++nRemoved;
             //FIX: Shouldn't erase it if its documentObservers is non-empty
         }
+        logVerbose("Removed %zu old entries (%zu left; idle has %zd, byDocID has %zu)",
+                   nRemoved, _changes.size(), _idle.size(), _byDocID.size());
     }
 
 
@@ -257,6 +290,7 @@ namespace litecore {
             _byDocID[entry->docID] = entry;
         }
         entry->documentObservers.push_back(notifier);
+        ++_numDocObservers;
         return entry;
     }
 
@@ -266,6 +300,7 @@ namespace litecore {
         auto i = find(observers.begin(), observers.end(), notifier);
         Assert(i != observers.end());
         observers.erase(i);
+        --_numDocObservers;
         if (observers.empty() && entry->isIdle()) {
             _byDocID.erase(entry->docID);
             Assert(!_idle.empty());
@@ -309,9 +344,38 @@ namespace litecore {
 
 
     DatabaseChangeNotifier::DatabaseChangeNotifier(SequenceTracker &t, Callback cb, sequence_t afterSeq)
-    :tracker(t),
-     callback(cb),
-     _placeholder(tracker.addPlaceholderAfter(this, afterSeq))
-    { }
+    :Logging(ChangesLog)
+    ,tracker(t)
+    ,callback(cb)
+    ,_placeholder(tracker.addPlaceholderAfter(this, afterSeq))
+    {
+        if (callback)
+            log("Created, starting after #%lld", afterSeq);
+    }
+
+
+    DatabaseChangeNotifier::~DatabaseChangeNotifier() {
+        if (callback)
+            log("Deleting");
+        tracker.removePlaceholder(_placeholder);
+    }
+
+
+    void DatabaseChangeNotifier::notify() {
+        if (callback) {
+            log("posting notification");
+            callback(*this);
+        }
+    }
+
+
+    size_t DatabaseChangeNotifier::readChanges(SequenceTracker::Change changes[],
+                                               size_t maxChanges,
+                                               bool &external) {
+        size_t n = tracker.readChanges(_placeholder, changes, maxChanges, external);
+        log("readChanges(%zu) -> %zu changes", maxChanges, n);
+        return n;
+    }
+
 
 }
