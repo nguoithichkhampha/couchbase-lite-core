@@ -24,5 +24,6 @@
     // checked out next to this one.
     #include "../../../couchbase-lite-core-EE/Encryption/see-sqlite.c"
 #else
-    #include "../../vendor/SQLiteCpp/sqlite3/sqlite3.c"
+    // tham_ha: I commented this include line to explicitly use sqlite3 from sqlcipher library :)
+//    #include "../../vendor/SQLiteCpp/sqlite3/sqlite3.c"
 #endif

@@ -144,12 +144,13 @@ endif()
 include_directories("vendor/fleece/Fleece"
                     "vendor/fleece/vendor"
                     "vendor/SQLiteCpp/include"
-                    "vendor/SQLiteCpp/sqlite3"
+                    "vendor/sqlcipher/src/headers"
                     "vendor/sqlite3-unicodesn"
                     "vendor/BLIP-Cpp/include/blip_cpp"
                     "vendor/BLIP-Cpp/src/util"
                     "vendor/civetweb/include"
-                    "vendor/mbedtls/include")
+                    "vendor/sqlcipher/vendor/mbedtls/include"
+                    )
 
 if(WIN32)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4099")
@@ -166,7 +167,7 @@ add_subdirectory(REST)
 add_subdirectory(vendor/fleece              EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/sqlite3-unicodesn   EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/BLIP-Cpp            EXCLUDE_FROM_ALL)
-add_subdirectory(vendor/mbedtls             EXCLUDE_FROM_ALL)
+add_subdirectory(vendor/sqlcipher           EXCLUDE_FROM_ALL)
 
 ### MORE BUILD SETTINGS:
 

@@ -141,7 +141,22 @@ namespace litecore {
 #ifdef COUCHBASE_ENTERPRISE
         return (alg == kNoEncryption || alg == kAES128);
 #else
-        return (alg == kNoEncryption);
+        static int sEncryptionEnabled = -1;
+        static once_flag once;
+        call_once(once, []() {
+            // Check whether encryption is available:
+            if (sqlite3_compileoption_used("SQLITE_HAS_CODEC") == 0) {
+                sEncryptionEnabled = false;
+            } else {
+                // Determine whether we're using SQLCipher or the SQLite Encryption Extension,
+                // by calling a SQLCipher-specific pragma that returns a number:
+                SQLite::Database sqlDb(":memory:", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+                SQLite::Statement s(sqlDb, "PRAGMA cipher_default_kdf_iter");
+                LogStatement(s);
+                sEncryptionEnabled = s.executeStep();
+            }
+        });
+        return sEncryptionEnabled > 0 && (alg == kNoEncryption || alg == kAES256);
 #endif
     }
 
@@ -179,8 +194,9 @@ namespace litecore {
                                                sqlFlags,
                                                kBusyTimeoutSecs * 1000);
 
-        if (!decrypt())
+        if (!decrypt()) {
             error::_throw(error::UnsupportedEncryption);
+        }
 
         if (sqlite3_libversion_number() < 003012) {
             // Prior to 3.12, the default page size was 1024, which is less than optimal.
@@ -282,8 +298,9 @@ namespace litecore {
 
     bool SQLiteDataFile::decrypt() {
         auto alg = options().encryptionAlgorithm;
-        if (!factory().encryptionEnabled(alg))
+        if (!factory().encryptionEnabled(alg)) {
             return false;
+        }
 #ifdef COUCHBASE_ENTERPRISE
         // Set the encryption key in SQLite:
         slice key;
@@ -299,10 +316,21 @@ namespace litecore {
             error::_throw(error::UnsupportedEncryption,
                           "Unable to set encryption key (SQLite error %d)", rc);
         }
+#else
+        if (alg != kNoEncryption) {
+            if (!factory().encryptionEnabled(alg)) {
+                return false;
+            }
 
+            // Set the encryption key in SQLite:
+            slice key = options().encryptionKey;
+            if(key.buf == nullptr || key.size != 32)
+                error::_throw(error::InvalidParameter);
+            _exec(string("PRAGMA key = \"x'") + key.hexString() + "'\"");
+        }
+#endif
         // Verify that encryption key is correct (or db is unencrypted, if no key given):
         _exec("SELECT count(*) FROM sqlite_master");
-#endif
         return true;
     }
 
@@ -339,6 +367,83 @@ namespace litecore {
             error::_throw(litecore::error::SQLite, rekeyResult);
         }
 
+#else
+        bool currentlyEncrypted = (options().encryptionAlgorithm != kNoEncryption);
+        switch (alg) {
+        case kNoEncryption:
+            if (!currentlyEncrypted)
+                return;
+            LogTo(DBLog, "Decrypting DataFile");
+            break;
+        case kAES256:
+            if (currentlyEncrypted) {
+                LogTo(DBLog, "Changing DataFile encryption key");
+            }
+            else {
+                LogTo(DBLog, "Encrypting DataFile");
+            }
+
+            if(newKey.buf == nullptr || newKey.size != 32)
+                error::_throw(error::InvalidParameter);
+            break;
+        default:
+            error::_throw(error::InvalidParameter);
+        }
+        if (!factory().encryptionEnabled(alg)) {
+            error::_throw(error::UnsupportedEncryption);
+        }
+        // Get the userVersion of the db:
+        int64_t userVersion = intQuery("PRAGMA user_version");
+
+        // Make a path for a temporary database file:
+        const FilePath &realPath = filePath();
+        FilePath tempPath(realPath.dirName(), "_rekey_temp.sqlite3");
+        factory().deleteFile(tempPath);
+
+        // Create & attach a temporary database encrypted with the new key:
+        {
+            string sql = "ATTACH DATABASE ? AS rekeyed_db KEY ";
+            if (alg == kNoEncryption)
+                sql += "''";
+            else
+                sql += "\"x'" + newKey.hexString() + "'\"";
+            SQLite::Statement attach(*_sqlDb, sql);
+            attach.bind(1, tempPath);
+            LogStatement(attach);
+            attach.executeStep();
+        }
+
+        try {
+
+            // Export the current database's contents to the new one:
+            // <https://www.zetetic.net/sqlcipher/sqlcipher-api/#sqlcipher_export>
+            {
+                _exec("SELECT sqlcipher_export('rekeyed_db')");
+
+                stringstream sql;
+                sql << "PRAGMA rekeyed_db.user_version = " << userVersion;
+                _exec(sql.str());
+            }
+
+            // Close the old database:
+            close();
+
+            // Replace it with the new one:
+            try {
+                factory().deleteFile(realPath);
+            } catch (const error &) {
+                // ignore errors deleting old files
+            }
+            factory().moveFile(tempPath, realPath);
+
+        } catch (const exception &) {
+            // Back out and rethrow:
+            close();
+            factory().deleteFile(tempPath);
+            reopen();
+            throw;
+        }
+#endif
         // Update encryption key:
         auto opts = options();
         opts.encryptionAlgorithm = alg;
@@ -347,9 +452,6 @@ namespace litecore {
 
         // Finally reopen:
         reopen();
-#else
-        error::_throw(litecore::error::UnsupportedEncryption);
-#endif
     }
 
 

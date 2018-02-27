@@ -22,3 +22,8 @@
 [submodule "vendor/mbedtls"]
 	path = vendor/mbedtls
 	url = https://github.com/ARMmbed/mbedtls.git
+[submodule "vendor/sqlcipher"]
+	path = vendor/sqlcipher
+	url = https://github.com/couchbaselabs/couchbase-lite-libsqlcipher
+[submodule "sqlcipher"]
+	branch = feature/mbedtls

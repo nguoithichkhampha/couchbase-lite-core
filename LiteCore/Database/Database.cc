@@ -110,7 +110,8 @@ namespace c4Internal {
             options.encryptionKey = alloc_slice(config.encryptionKey.bytes,
                                                 kEncryptionKeySize[options.encryptionAlgorithm]);
 #else
-            error::_throw(error::UnsupportedEncryption);
+            options.encryptionKey = alloc_slice(config.encryptionKey.bytes,
+                                                kEncryptionKeySize[options.encryptionAlgorithm]);
 #endif
         }
 
