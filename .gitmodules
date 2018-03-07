@@ -27,3 +27,6 @@
 	url = https://github.com/couchbaselabs/couchbase-lite-libsqlcipher
 [submodule "sqlcipher"]
 	branch = feature/mbedtls
+[submodule "vendor/json"]
+	path = vendor/json
+	url = https://github.com/nlohmann/json.git

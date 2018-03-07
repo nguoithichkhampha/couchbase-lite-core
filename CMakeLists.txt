@@ -387,6 +387,28 @@ add_library(Support STATIC
     ${PLATFORM_SRC}
 )
 
+### Copy all static libraries into one folder
+
+if (NOT STATIC_OUTPUT_DIR)
+    set(STATIC_OUTPUT_DIR  ${EXECUTABLE_OUTPUT_PATH})
+endif()
+
+message(STATUS "STATIC_OUTPUT_DIR=           ${STATIC_OUTPUT_DIR}")
+
+add_custom_command(TARGET LiteCoreStatic
+              POST_BUILD
+              COMMAND ${CMAKE_COMMAND} -E make_directory ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:LiteCoreStatic> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Support> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:FleeceStatic> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:SQLite3_UnicodeSN> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CivetWeb> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mbedcrypto> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:BLIPStatic> ${STATIC_OUTPUT_DIR}
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:zlibstatic> ${STATIC_OUTPUT_DIR}
+			  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:sqlcipher> ${STATIC_OUTPUT_DIR}
+)
+
 ### TOOLS:
 
 #add_subdirectory(tools)
