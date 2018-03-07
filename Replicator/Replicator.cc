@@ -35,6 +35,8 @@ using namespace fleeceapi;
 
 namespace litecore { namespace repl {
 
+    static const char *kReplicatorProtocolName = "+CBMobile_2";
+
 
     // Subroutine of constructor that looks up HTTP cookies for the request, adds them to
     // options.properties' cookies, and returns the properties dict.
@@ -42,7 +44,8 @@ namespace litecore { namespace repl {
                                              const websocket::Address &address,
                                              Worker::Options &options)
     {
-        options.setProperty(slice(kC4SocketOptionWSProtocols), Connection::kWSProtocolName);
+        options.setProperty(slice(kC4SocketOptionWSProtocols),
+                            (string(Connection::kWSProtocolName) + kReplicatorProtocolName).c_str());
         if (!options.properties[kC4ReplicatorOptionCookies]) {
             C4Address c4addr {
                 slice(address.scheme),
@@ -154,11 +157,13 @@ namespace litecore { namespace repl {
 
         setProgress(_pushStatus.progress + _pullStatus.progress);
 
-        logDebug("pushStatus=%-s, pullStatus=%-s, dbStatus=%-s, progress=%llu/%llu",
-                 kC4ReplicatorActivityLevelNames[_pushStatus.level],
-                 kC4ReplicatorActivityLevelNames[_pullStatus.level],
-                 kC4ReplicatorActivityLevelNames[_dbStatus.level],
-                 status().progress.unitsCompleted, status().progress.unitsTotal);
+        if (SyncBusyLog.effectiveLevel() <= LogLevel::Info) {
+            log("pushStatus=%-s, pullStatus=%-s, dbStatus=%-s, progress=%llu/%llu",
+                kC4ReplicatorActivityLevelNames[_pushStatus.level],
+                kC4ReplicatorActivityLevelNames[_pullStatus.level],
+                kC4ReplicatorActivityLevelNames[_dbStatus.level],
+                status().progress.unitsCompleted, status().progress.unitsTotal);
+        }
 
         if (_pullStatus.error.code)
             onError(_pullStatus.error);
@@ -173,11 +178,12 @@ namespace litecore { namespace repl {
 
 
     Worker::ActivityLevel Replicator::computeActivityLevel() const {
+        ActivityLevel level;
         switch (_connectionState) {
             case Connection::kConnecting:
-                return kC4Connecting;
+                level = kC4Connecting;
+                break;
             case Connection::kConnected: {
-                ActivityLevel level;
                 if (_checkpoint.isUnsaved())
                     level = kC4Busy;
                 else
@@ -190,16 +196,23 @@ namespace litecore { namespace repl {
                     level = kC4Busy;
                 }
                 assert(level > kC4Stopped);
-                return level;
+                break;
             }
             case Connection::kClosing:
                 // Remain active while I wait for the connection to finish closing:
-                return kC4Busy;
+                level = kC4Busy;
+                break;
             case Connection::kDisconnected:
             case Connection::kClosed:
                 // After connection closes, remain active while I wait for db to finish writes:
-                return (_dbStatus.level == kC4Busy) ? kC4Busy : kC4Stopped;
+                level = (_dbStatus.level == kC4Busy) ? kC4Busy : kC4Stopped;
+                break;
         }
+        if (SyncBusyLog.effectiveLevel() <= LogLevel::Info) {
+            log("activityLevel=%-s: connectionState=%d",
+                kC4ReplicatorActivityLevelNames[level], _connectionState);
+        }
+        return level;
     }
 
 
@@ -234,8 +247,9 @@ namespace litecore { namespace repl {
     }
 
 
-    void Replicator::gotDocumentError(slice docID, C4Error error, bool pushing, bool transient) {
-        _delegate->replicatorDocumentError(this, pushing, docID, error, transient);
+    void Replicator::_gotDocumentError(alloc_slice docID, C4Error error, bool pushing, bool transient) {
+        if (_delegate)
+            _delegate->replicatorDocumentError(this, pushing, docID, error, transient);
     }
 
 
@@ -257,7 +271,8 @@ namespace litecore { namespace repl {
         } else if (setCookie) {
             _dbActor->setCookie(setCookie.asString());
         }
-        _delegate->replicatorGotHTTPResponse(this, status, headers);
+        if (_delegate)
+            _delegate->replicatorGotHTTPResponse(this, status, headers);
     }
 
 
@@ -295,7 +310,8 @@ namespace litecore { namespace repl {
         }
         _closeStatus = status;
 
-        static const C4ErrorDomain kDomainForReason[] = {WebSocketDomain, POSIXDomain, NetworkDomain};
+        static const C4ErrorDomain kDomainForReason[] = {WebSocketDomain, POSIXDomain,
+                                                         NetworkDomain, LiteCoreDomain};
 
         // If this was an unclean close, set my error property:
         if (status.reason != websocket::kWebSocketClose || status.code != websocket::kCodeNormal) {
@@ -338,6 +354,7 @@ namespace litecore { namespace repl {
                 return;
             
             _checkpointDocID = checkpointID;
+            _checkpointReceived = false;
             bool haveLocalCheckpoint = false;
 
             if (data) {
@@ -364,9 +381,9 @@ namespace litecore { namespace repl {
             msg["client"_sl] = checkpointID;
             sendRequest(msg, [this,haveLocalCheckpoint](MessageProgress progress) {
                 // ...after the checkpoint is received:
-                MessageIn *response = progress.reply;
-                if (!response)
+                if (progress.state != MessageProgress::kComplete)
                     return;
+                MessageIn *response = progress.reply;
                 Checkpoint remoteCheckpoint;
 
                 if (response->isError()) {
@@ -384,6 +401,7 @@ namespace litecore { namespace repl {
                             gotcp.local, SPLAT(gotcp.remote), SPLAT(_checkpointRevID));
                     }
                 }
+                _checkpointReceived = true;
 
                 if (haveLocalCheckpoint) {
                     // Compare checkpoints, reset if mismatched:
@@ -392,6 +410,9 @@ namespace litecore { namespace repl {
                     // Now we have the checkpoints! Time to start replicating:
                     startReplicating();
                 }
+
+                if (_checkpointJSONToSave)
+                    saveCheckpointNow();    // _saveCheckpoint() was waiting for _checkpointRevID
             });
 
             if (!haveLocalCheckpoint)
@@ -403,16 +424,29 @@ namespace litecore { namespace repl {
     void Replicator::_saveCheckpoint(alloc_slice json) {
         if (!connection())
             return;
+        _checkpointJSONToSave = move(json);
+        if (_checkpointReceived)
+            saveCheckpointNow();
+        // ...else wait until checkpoint received (see above), which will call saveCheckpointNow().
+    }
+
+
+    void Replicator::saveCheckpointNow() {
+        alloc_slice json = move(_checkpointJSONToSave);
+
         log("Saving remote checkpoint %.*s with rev='%.*s': %.*s ...",
             SPLAT(_checkpointDocID), SPLAT(_checkpointRevID), SPLAT(json));
+        Assert(_checkpointReceived);
+        Assert(json);
+
         MessageBuilder msg("setCheckpoint"_sl);
         msg["client"_sl] = _checkpointDocID;
         msg["rev"_sl] = _checkpointRevID;
         msg << json;
         sendRequest(msg, [=](MessageProgress progress) {
-            MessageIn *response = progress.reply;
-            if (!response)
+            if (progress.state != MessageProgress::kComplete)
                 return;
+            MessageIn *response = progress.reply;
             if (response->isError()) {
                 gotError(response);
                 warn("Failed to save checkpoint!");

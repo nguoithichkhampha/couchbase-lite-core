@@ -20,6 +20,7 @@
 #include "ReplicatorTypes.hh"
 #include "Worker.hh"
 #include "c4BlobStore.h"
+#include "FleeceCpp.hh"
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -76,6 +77,10 @@ namespace litecore { namespace repl {
 
         void insertRevision(RevToInsert *rev);
 
+        void markRevSynced(const Rev &rev) {
+            enqueue(&DBWorker::_markRevSynced, rev);
+        }
+
         void setCookie(slice setCookieHeader) {
             enqueue(&DBWorker::_setCookie, alloc_slice(setCookieHeader));
         }
@@ -95,7 +100,6 @@ namespace litecore { namespace repl {
         void _setCheckpoint(alloc_slice data, std::function<void()> onComplete);
         void _getChanges(GetChangesParams, Retained<Pusher> pusher);
         bool addChangeToList(const C4DocumentInfo &info, C4Document *doc, std::vector<Rev> &changes);
-        alloc_slice getRemoteRevID(C4Document*);
         void _findOrRequestRevs(Retained<blip::MessageIn> req,
                                 std::function<void(std::vector<bool>)> callback);
         void _sendRevision(RevRequest request,
@@ -108,15 +112,19 @@ namespace litecore { namespace repl {
         void _connectionClosed() override;
 
         void dbChanged();
-        bool markRevsSynced(const std::vector<Rev> changes, C4Error *outError);
+        void _markRevSynced(Rev);
 
+        fleeceapi::Dict getRevToSend(C4Document*, const RevRequest&, C4Error *outError);
+        static std::string revHistoryString(C4Document*, const RevRequest&);
         void writeRevWithLegacyAttachments(fleeceapi::Encoder&,
                                            fleeceapi::Dict rev,
                                            FLSharedKeys sk);
         bool findAncestors(slice docID, slice revID,
                            std::vector<alloc_slice> &ancestors);
-        int findProposedChange(slice docID, slice revID, slice parentRevID);
+        int findProposedChange(slice docID, slice revID, slice parentRevID,
+                               alloc_slice &outCurrentRevID);
         void updateRemoteRev(C4Document* NONNULL);
+        ActivityLevel computeActivityLevel() const override;
 
         static const size_t kMaxPossibleAncestors = 10;
 

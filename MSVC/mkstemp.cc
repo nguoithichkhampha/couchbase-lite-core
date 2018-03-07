@@ -57,12 +57,11 @@ int mkstemp(char *tmp)
 	for(int i = 0; i < INT32_MAX; i++) {
 		mktemp_internal(tmp);
 		const CA2WEX<256> wpath(tmp, CP_UTF8);
-		if(_wstat64i32(wpath, &buf) != 0) {
-			const int fd = _wopen(wpath, O_RDWR | O_CREAT | O_EXCL | O_BINARY, _S_IREAD | _S_IWRITE);
-			if (fd >= 0 || errno != EEXIST) {
-				return fd;
-			}
-		} 
+		// O_EXCL means trying to open an existing file is an error
+		const int fd = _wopen(wpath, O_RDWR | O_CREAT | O_EXCL | O_BINARY, _S_IREAD | _S_IWRITE);
+		if (fd >= 0 || errno != EEXIST) {
+			return fd;
+		}
 
 		strcpy_s(tmp, len, cp);
 	}

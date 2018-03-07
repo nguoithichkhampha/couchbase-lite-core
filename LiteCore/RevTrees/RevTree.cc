@@ -321,6 +321,18 @@ namespace litecore {
         return commonAncestorIndex;
     }
 
+    void RevTree::markBranchAsConflict(const Rev *rev, bool conflict) {
+        for (; rev; rev = (Rev*)rev->parent) {
+            if (rev->isConflict() == conflict)
+                break;
+            if (conflict)
+                const_cast<Rev*>(rev)->addFlag(Rev::kIsConflict);
+            else
+                const_cast<Rev*>(rev)->clearFlag(Rev::kIsConflict);
+            _changed = true;
+        }
+    }
+
 #pragma mark - REMOVAL (prune / purge / compact):
 
     void RevTree::keepBody(const Rev *rev_in) {
@@ -368,7 +380,7 @@ namespace litecore {
                 for (Rev* anc = rev; anc; anc = (Rev*)anc->parent) {
                     if (++depth > maxDepth) {
                         // Mark revs that are too far away:
-                        anc->markForPurge();
+                        anc->addFlag(Rev::kPurge);
                         numPruned++;
                     }
                 }
@@ -380,10 +392,24 @@ namespace litecore {
         if (numPruned == 0)
             return 0;
 
+        // Don't prune current remote revisions:
+        for (auto &r : _remoteRevs) {
+            if (r.second->isMarkedForPurge()) {
+                const_cast<Rev*>(r.second)->clearFlag(Rev::kPurge);
+                --numPruned;
+            }
+        }
+
+        if (numPruned == 0)
+            return 0;
+
         // Clear parent links that point to revisions being pruned:
-        for (auto &rev : _revs)
-            if (rev->parent && rev->parent->isMarkedForPurge())
-                rev->parent = nullptr;
+        for (auto &rev : _revs) {
+            if (!rev->isMarkedForPurge()) {
+                while (rev->parent && rev->parent->isMarkedForPurge())
+                    rev->parent = rev->parent->parent;
+            }
+        }
         compact();
         return numPruned;
     }
@@ -395,7 +421,7 @@ namespace litecore {
             return 0;
         do {
             nPurged++;
-            rev->markForPurge();
+            rev->addFlag(Rev::kPurge);
             const Rev* parent = (Rev*)rev->parent;
             rev->parent = nullptr;                      // unlink from parent
             rev = (Rev*)parent;
@@ -445,12 +471,12 @@ namespace litecore {
         int delta = rev2->isLeaf() - rev1->isLeaf();
         if (delta)
             return delta < 0;
-        // Live revs go before deletions.
-        delta = rev1->isDeleted() - rev2->isDeleted();
-        if (delta)
-            return delta < 0;
         // Conflicting revs never go first.
         delta = rev1->isConflict() - rev2->isConflict();
+        if (delta)
+            return delta < 0;
+        // Live revs go before deletions.
+        delta = rev1->isDeleted() - rev2->isDeleted();
         if (delta)
             return delta < 0;
         // Otherwise compare rev IDs, with higher rev ID going first:
@@ -467,10 +493,8 @@ namespace litecore {
 
     // If there are no non-conflict leaves, remove the conflict marker from the 1st:
     void RevTree::checkForResolvedConflict() {
-        if (_sorted && !_revs.empty() && _revs[0]->isConflict()) {
-            for (auto rev = _revs[0]; rev; rev = (Rev*)rev->parent)
-                rev->clearFlag(Rev::kIsConflict);
-        }
+        if (_sorted && !_revs.empty() && _revs[0]->isConflict())
+            markBranchAsConflict(_revs[0], false);
     }
 
     bool RevTree::hasNewRevisions() const {

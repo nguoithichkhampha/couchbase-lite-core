@@ -25,6 +25,7 @@
 #include "VersionedDocument.hh"
 #include "SecureRandomize.hh"
 #include "SecureDigest.hh"
+#include "Fleece.hh"
 #include "varint.hh"
 #include <ctime>
 #include <algorithm>
@@ -264,7 +265,9 @@ namespace c4Internal {
             return total;
         }
 
-        void resolveConflict(C4String winningRevID, C4String losingRevID, C4Slice mergedBody) override {
+        void resolveConflict(C4String winningRevID, C4String losingRevID,
+                             C4Slice mergedBody, C4RevisionFlags mergedFlags) override
+        {
             // Validate the revIDs:
             auto winningRev = _versionedDoc[revidBuffer(winningRevID)];
             auto losingRev = _versionedDoc[revidBuffer(losingRevID)];
@@ -275,21 +278,27 @@ namespace c4Internal {
             if (winningRev == losingRev)
                 error::_throw(error::InvalidParameter);
 
+            _versionedDoc.markBranchAsConflict(winningRev, false);
+            _versionedDoc.markBranchAsConflict(losingRev, false);
+
             // Add a tombstone as a child of losingRev:
-            selectRevision(losingRev);
-            C4DocPutRequest rq = { };
-            rq.revFlags = kRevDeleted;
-            rq.history = &losingRevID;
-            rq.historyCount = 1;
-            rq.allowConflict = true;
-            putNewRevision(rq);
+            if (!losingRev->isDeleted()) {
+                selectRevision(losingRev);
+                C4DocPutRequest rq = { };
+                rq.revFlags = kRevDeleted;
+                rq.history = &losingRevID;
+                rq.historyCount = 1;
+                putNewRevision(rq);
+            }
 
             if (mergedBody.buf) {
                 // Then add the new merged rev as a child of winningRev:
                 selectRevision(winningRev);
-                rq.revFlags = 0;
+                C4DocPutRequest rq = { };
+                rq.revFlags = mergedFlags & kRevDeleted;
                 rq.body = mergedBody;
                 rq.history = &winningRevID;
+                rq.historyCount = 1;
                 putNewRevision(rq);
             }
         }
@@ -325,9 +334,12 @@ namespace c4Internal {
         bool putNewRevision(const C4DocPutRequest &rq) override {
             bool deletion = (rq.revFlags & kRevDeleted) != 0;
             revidBuffer encodedNewRevID = generateDocRevID(rq.body, selectedRev.revID, deletion);
+            slice body = rq.body;
+            if (!body)
+                body = slice{fleece::Dict::kEmpty, 2};
             int httpStatus;
             auto newRev = _versionedDoc.insert(encodedNewRevID,
-                                               rq.body,
+                                               body,
                                                (Rev::Flags)rq.revFlags,
                                                _selectedRev,
                                                rq.allowConflict,

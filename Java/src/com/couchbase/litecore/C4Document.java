@@ -167,9 +167,9 @@ public class C4Document implements C4Constants {
         return purgeRevision(_handle, revID);
     }
 
-    public void resolveConflict(String winningRevID, String losingRevID, byte[] mergeBody)
+    public void resolveConflict(String winningRevID, String losingRevID, byte[] mergeBody, int mergedFlags)
             throws LiteCoreException {
-        resolveConflict(_handle, winningRevID, losingRevID, mergeBody);
+        resolveConflict(_handle, winningRevID, losingRevID, mergeBody, mergedFlags);
     }
 
     // - Creating and Updating Documents
@@ -182,6 +182,20 @@ public class C4Document implements C4Constants {
         return new C4Document(update2(_handle, body != null ? body.getHandle() : 0, flags), false);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof C4Document)) return false;
+
+        C4Document that = (C4Document) o;
+
+        return _handle == that._handle;
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (_handle ^ (_handle >>> 32));
+    }
     //-------------------------------------------------------------------------
     // helper methods
     //-------------------------------------------------------------------------
@@ -242,12 +256,12 @@ public class C4Document implements C4Constants {
 
     // returns blobKey if the given dictionary is a [reference to a] blob; otherwise null (0)
     public static C4BlobKey dictIsBlob(FLDict dict, FLSharedKeys sk) {
-        long handle = dictIsBlob(dict.getHandle(), sk.getHandle());
+        long handle = dictIsBlob(dict.getHandle(), sk == null ? 0L : sk.getHandle());
         return handle != 0 ? new C4BlobKey(handle) : null;
     }
 
     public static boolean dictContainsBlobs(FLSliceResult dict, FLSharedKeys sk) {
-        return dictContainsBlobs2(dict.getHandle(), sk.getHandle());
+        return dictContainsBlobs2(dict.getHandle(), sk == null ? 0L : sk.getHandle());
     }
 
     public String bodyAsJSON(boolean canonical) throws LiteCoreException {
@@ -338,7 +352,7 @@ public class C4Document implements C4Constants {
 
     static native void resolveConflict(long doc,
                                        String winningRevID, String losingRevID,
-                                       byte[] mergeBody)
+                                       byte[] mergeBody, int mergedFlags)
             throws LiteCoreException;
 
     // - Purging and Expiration

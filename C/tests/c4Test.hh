@@ -174,12 +174,14 @@ public:
     void createRev(C4Slice docID, C4Slice revID, C4Slice body, C4RevisionFlags flags =0);
     static void createRev(C4Database *db, C4Slice docID, C4Slice revID, C4Slice body, C4RevisionFlags flags =0);
     static void createFleeceRev(C4Database *db, C4Slice docID, C4Slice revID, C4Slice jsonBody, C4RevisionFlags flags =0);
+    static std::string createNewRev(C4Database *db, C4Slice docID, C4Slice body, C4RevisionFlags flags =0);
 
     void createNumberedDocs(unsigned numberOfDocs);
 
     std::vector<C4BlobKey> addDocWithAttachments(C4Slice docID,
                                                  std::vector<std::string> attachments,
-                                                 const char *contentType);
+                                                 const char *contentType,
+                                                 bool legacy =false);
     void checkAttachment(C4Database *inDB, C4BlobKey blobKey, C4Slice expectedData);
     void checkAttachments(C4Database *inDB, std::vector<C4BlobKey> blobKeys,
                           std::vector<std::string> expectedData);

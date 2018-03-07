@@ -30,6 +30,9 @@
 #include "c4Private.h"
 #include "BLIP.hh"
 #include <chrono>
+#ifndef __APPLE__
+#include "arc4random.h"
+#endif
 
 using namespace std;
 using namespace fleece;
@@ -47,12 +50,6 @@ namespace litecore { namespace repl {
     static bool isNotFoundError(C4Error err) {
         return err.domain == LiteCoreDomain && err.code == kC4ErrorNotFound;
     }
-
-    static bool hasConflict(C4Document *doc) {
-        return c4doc_selectCurrentRevision(doc)
-            && c4doc_selectNextLeafRevision(doc, false, false, nullptr);
-    }
-
 
     DBWorker::DBWorker(Connection *connection,
                      Replicator *replicator,
@@ -327,12 +324,11 @@ namespace litecore { namespace repl {
         }
         _maxPushedSequence = latestChangeSequence;
 
-        markRevsSynced(changes, nullptr);
-        pusher->gotChanges(changes, error);
+        _pusher = pusher;
+        pusher->gotChanges(changes, latestChangeSequence, error);
 
         if (p.continuous && p.limit > 0 && !_changeObserver) {
             // Reached the end of history; now start observing for future changes
-            _pusher = pusher;
             _pushDocIDs = p.docIDs;
             _changeObserver = c4dbobs_create(_db,
                                              [](C4DatabaseObserver* observer, void *context) {
@@ -345,8 +341,11 @@ namespace litecore { namespace repl {
     }
 
 
-    // Callback from the C4DatabaseObserver when the database has changed
+    // (Async) callback from the C4DatabaseObserver when the database has changed
     void DBWorker::dbChanged() {
+        if (!_changeObserver)
+            return; // if replication has stopped already by the time this async call occurs
+
         static const uint32_t kMaxChanges = 100;
         C4DatabaseChange c4changes[kMaxChanges];
         bool external;
@@ -388,9 +387,10 @@ namespace litecore { namespace repl {
             _maxPushedSequence = latestChangeSequence;
 
             if (!changes.empty()) {
-                markRevsSynced(changes, nullptr);
-                _pusher->gotChanges(changes, {});
+                _pusher->gotChanges(changes, latestChangeSequence, {});
             }
+
+            c4dbobs_releaseChanges(c4changes, nChanges);
         }
     }
 
@@ -400,47 +400,29 @@ namespace litecore { namespace repl {
         alloc_slice remoteRevID;
         if (_getForeignAncestors) {
             // For proposeChanges, find the nearest foreign ancestor of the current rev:
-            remoteRevID = getRemoteRevID(doc);
-            if (_skipForeignChanges && remoteRevID == slice(info.revID))
-                return false;   // reject rev: it's foreign
+            Assert(_remoteDBID);
+            c4::sliceResult foreignAncestor( c4doc_getRemoteAncestor(doc, _remoteDBID) );
+            logDebug("remoteRevID of '%.*s' is %.*s", SPLAT(doc->docID), SPLAT(remoteRevID));
+            if (_skipForeignChanges && foreignAncestor == slice(info.revID))
+                return false;   // skip this rev: it's already on the peer
+            remoteRevID = alloc_slice(foreignAncestor);
         }
         changes.emplace_back(info, remoteRevID);
         return true;
     }
 
 
-    // For proposeChanges, find the latest ancestor of the current rev that is known to the server.
-    // This is a rev that's either marked as foreign (came from the server), or whose sequence is
-    // in the range that's already been pushed to the server.
-    alloc_slice DBWorker::getRemoteRevID(C4Document* doc) {
-        Assert(_remoteDBID);
-        c4::sliceResult foreignAncestor( c4doc_getRemoteAncestor(doc, _remoteDBID) );
-        do {
-            slice rev(doc->selectedRev.revID);
-            if (rev == foreignAncestor) {
-                return alloc_slice(foreignAncestor);
-            } else if (doc->selectedRev.sequence <= _maxPushedSequence) {
-                return alloc_slice(rev);
-            }
-        } while (c4doc_selectParentRevision(doc));
-        return alloc_slice();
-    }
-
-
-    // Mark all of these revs as synced, which flags them as kRevKeepBody if they're still current.
-    // This is actually premature because those revs haven't been pushed yet; but if we
-    // wait until after the push, the doc may have been updated again and the body of the
-    // pushed revision lost. By doing it early we err on the side of correctness and may
-    // save some revision bodies unnecessarily, which isn't that bad.
-    bool DBWorker::markRevsSynced(const vector<Rev> changes, C4Error *outError) {
-        if (changes.empty())
-            return true;
+    void DBWorker::_markRevSynced(Rev rev) {
+        logDebug("Marking rev '%.*s' %.*s (#%llu) as current for remote db %u",
+                 SPLAT(rev.docID), SPLAT(rev.revID), rev.sequence, _remoteDBID);
+        C4Error error;
         c4::Transaction t(_db);
-        if (!t.begin(outError))
-            return false;
-        for (auto i = changes.begin(); i != changes.end(); ++i)
-            c4db_markSynced(_db, i->docID, i->sequence);
-        return t.commit(outError);
+        if (!t.begin(&error)
+            || !c4db_markSynced(_db, rev.docID, rev.sequence, _remoteDBID, &error)
+            || !t.commit(&error)) {
+            warn("Unable to mark '%.*s' %.*s (#%llu) as synced; error %d/%d",
+                 SPLAT(rev.docID), SPLAT(rev.revID), rev.sequence, error.domain, error.code);
+        }
     }
 
 
@@ -488,13 +470,14 @@ namespace litecore { namespace repl {
                 slice parentRevID = change[2].asString();
                 if (parentRevID.size == 0)
                     parentRevID = nullslice;
-                int status = findProposedChange(docID, revID, parentRevID);
+                alloc_slice currentRevID;
+                int status = findProposedChange(docID, revID, parentRevID, currentRevID);
                 if (status == 0) {
                     ++requested;
                     whichRequested[i] = true;
                 } else {
-                    log("Rejecting proposed change '%.*s' #%.*s, parent #%.*s (status %d)",
-                        SPLAT(docID), SPLAT(revID), SPLAT(parentRevID), status);
+                    log("Rejecting proposed change '%.*s' %.*s with parent %.*s (status %d; current rev is %.*s)",
+                        SPLAT(docID), SPLAT(revID), SPLAT(parentRevID), status, SPLAT(currentRevID));
                     while (itemsWritten++ < i)
                         encoder.writeInt(0);
                     encoder.writeInt(status);
@@ -576,7 +559,9 @@ namespace litecore { namespace repl {
 
     // Checks whether the revID (if any) is really current for the given doc.
     // Returns an HTTP-ish status code: 0=OK, 409=conflict, 500=internal error
-    int DBWorker::findProposedChange(slice docID, slice revID, slice parentRevID) {
+    int DBWorker::findProposedChange(slice docID, slice revID, slice parentRevID,
+                                     alloc_slice &outCurrentRevID)
+    {
         C4Error err;
         //OPT: We don't need the document body, just its metadata, but there's no way to say that
         c4::ref<C4Document> doc = c4doc_get(_db, docID, true, &err);
@@ -588,19 +573,24 @@ namespace litecore { namespace repl {
                 gotError(err);
                 return 500;
             }
-        } else if (slice(doc->revID) == revID) {
+        }
+        int status;
+        if (slice(doc->revID) == revID) {
             // I already have this revision:
-            return 304;
+            status = 304;
         } else if (!parentRevID) {
             // Peer is creating new doc; that's OK if doc is currently deleted:
-            return (doc->flags & kDocDeleted) ? 0 : 409;
+            status = (doc->flags & kDocDeleted) ? 0 : 409;
         } else if (slice(doc->revID) != parentRevID) {
             // Peer's revID isn't current, so this is a conflict:
-            return 409;
+            status = 409;
         } else {
             // I don't have this revision and it's not a conflict, so I want it!
-            return 0;
+            status = 0;
         }
+        if (status > 0)
+            outCurrentRevID = slice(doc->revID);
+        return status;
     }
 
 
@@ -608,92 +598,121 @@ namespace litecore { namespace repl {
 
 
     // Sends a document revision in a "rev" request.
-    void DBWorker::_sendRevision(RevRequest request,
-                                MessageProgressCallback onProgress)
-    {
+    void DBWorker::_sendRevision(RevRequest request, MessageProgressCallback onProgress) {
         if (!connection())
             return;
         logVerbose("Sending revision '%.*s' #%.*s",
                    SPLAT(request.docID), SPLAT(request.revID));
+
+        // Get the document & revision:
         C4Error c4err;
-        slice revisionBody;
-        C4RevisionFlags revisionFlags = 0;
-        string history;
         Dict root;
-        int blipError = 0;
         c4::ref<C4Document> doc = c4doc_get(_db, request.docID, true, &c4err);
-        if (doc && c4doc_selectRevision(doc, request.revID, true, &c4err)) {
-            revisionBody = slice(doc->selectedRev.body);
-            if (revisionBody) {
-                root = Value::fromTrustedData(revisionBody).asDict();
-                if (!root) {
-                    blipError = 500;
-                    c4err = c4error_make(LiteCoreDomain, kC4ErrorCorruptData,
-                                         "Unparseable revision body"_sl);
-                } else if (root.count() == 0) {
-                    root = Dict(); // no sense encoding an empty body later
-                }
-            }
-            revisionFlags = doc->selectedRev.flags;
+        if (doc)
+            root = getRevToSend(doc, request, &c4err);
 
-            // Generate the revision history string:
-            set<pure_slice> ancestors(request.ancestorRevIDs.begin(), request.ancestorRevIDs.end());
-            stringstream historyStream;
-            for (int n = 0; n < request.maxHistory; ++n) {
-                if (!c4doc_selectParentRevision(doc))
-                    break;
-                slice revID = doc->selectedRev.revID;
-                if (n > 0)
-                    historyStream << ',';
-                historyStream << fleeceapi::asstring(revID);
-                if (ancestors.find(revID) != ancestors.end())
-                    break;
-            }
-            history = historyStream.str();
-        } else {
-            // Well, this is a pickle. I'm supposed to send a revision that I can't read.
-            // I need to send a "rev" message, and I can't use a BLIP error response (because this
-            // is a request not a response) so I'll add an "error" property to it instead of body.
-            warn("sendRevision: Couldn't get '%.*s'/%.*s from db: %d/%d",
-                 SPLAT(request.docID), SPLAT(request.revID), c4err.domain, c4err.code);
-            doc = nullptr;
-            if (c4err.domain == LiteCoreDomain && c4err.code == kC4ErrorNotFound)
-                blipError = 404;
-            else if (c4err.domain == LiteCoreDomain && c4err.code == kC4ErrorDeleted)
-                blipError = 410;
-            else
-                blipError = 500;
-        }
-
-        // Now send the BLIP message:
-        MessageBuilder msg("rev"_sl);
-        msg.noreply = !onProgress;
+        // Now send the BLIP message. Normally it's "rev", but if this is an error we make it
+        // "norev" and include the error code:
+        MessageBuilder msg(root ? "rev"_sl : "norev"_sl);
         msg.compressed = true;
         msg["id"_sl] = request.docID;
         msg["rev"_sl] = request.revID;
         msg["sequence"_sl] = request.sequence;
-        if (request.noConflicts)
-            msg["noconflicts"_sl] = true;
-        if (revisionFlags & kRevDeleted)
-            msg["deleted"_sl] = "1"_sl;
-        if (!history.empty())
-            msg["history"_sl] = history;
-        if (blipError)
-            msg["error"_sl] = blipError;
-
-        // Write doc body as JSON:
         if (root) {
-            auto &bodyEncoder = msg.jsonBody();
-            auto sk = c4db_getFLSharedKeys(_db);
-            bodyEncoder.setSharedKeys(sk);
-            if (request.legacyAttachments && (revisionFlags & kRevHasAttachments))
-                writeRevWithLegacyAttachments(bodyEncoder, root, sk);
-            else
-                bodyEncoder.writeValue(root);
+            msg.noreply = !onProgress;
+            if (request.noConflicts)
+                msg["noconflicts"_sl] = true;
+            auto revisionFlags = doc->selectedRev.flags;
+            if (revisionFlags & kRevDeleted)
+                msg["deleted"_sl] = "1"_sl;
+            string history = revHistoryString(doc, request);
+            if (!history.empty())
+                msg["history"_sl] = history;
+
+            // Write doc body as JSON:
+            if (root.empty()) {
+                msg.write("{}"_sl);
+            } else {
+                auto &bodyEncoder = msg.jsonBody();
+                auto sk = c4db_getFLSharedKeys(_db);
+                bodyEncoder.setSharedKeys(sk);
+                if (request.legacyAttachments && (revisionFlags & kRevHasAttachments))
+                    writeRevWithLegacyAttachments(bodyEncoder, root, sk);
+                else
+                    bodyEncoder.writeValue(root);
+            }
+            sendRequest(msg, onProgress);
+
         } else {
-            msg.write("{}"_sl);
+            // Send an error if we couldn't get the revision:
+            int blipError;
+            if (c4err.domain == LiteCoreDomain && c4err.code == kC4ErrorNotFound)
+                blipError = 404;
+            else if (c4err.domain == LiteCoreDomain && c4err.code == kC4ErrorDeleted)
+                blipError = 410;
+            else {
+                warn("sendRevision: Couldn't get rev '%.*s' %.*s from db: %d/%d",
+                     SPLAT(request.docID), SPLAT(request.revID), c4err.domain, c4err.code);
+                blipError = 500;
+            }
+            msg["error"_sl] = blipError;
+            msg.noreply = true;
+            sendRequest(msg);
+            // invoke the progress callback with a fake disconnect so the Pusher will know the
+            // rev failed to send:
+            if (onProgress)
+                _pusher->couldntSendRevision(request);
         }
-        sendRequest(msg, onProgress);
+    }
+
+
+    Dict DBWorker::getRevToSend(C4Document* doc, const RevRequest &request, C4Error *c4err) {
+        if (!c4doc_selectRevision(doc, request.revID, true, c4err))
+            return nullptr;
+
+        slice revisionBody(doc->selectedRev.body);
+        if (!revisionBody) {
+            log("Revision '%.*s' #%.*s is obsolete; not sending it",
+                SPLAT(request.docID), SPLAT(request.revID));
+            *c4err = {LiteCoreDomain, kC4ErrorDeleted};
+            return nullptr;
+        }
+
+        Dict root = Value::fromTrustedData(revisionBody).asDict();
+        if (!root)
+            *c4err = {LiteCoreDomain, kC4ErrorCorruptData};
+        return root;
+    }
+
+
+    string DBWorker::revHistoryString(C4Document *doc, const RevRequest &request) {
+        set<pure_slice> ancestors(request.ancestorRevIDs.begin(), request.ancestorRevIDs.end());
+        stringstream historyStream;
+        int nWritten = 0;
+        unsigned lastGen = 0;
+        for (int n = 0; n < request.maxHistory; ++n) {
+            if (!c4doc_selectParentRevision(doc))
+                break;
+            slice revID = doc->selectedRev.revID;
+            unsigned gen = c4rev_getGeneration(revID);
+            if (lastGen == 0) {
+                lastGen = gen;
+            } else {
+                while (gen < --lastGen) {
+                    char fakeID[50];
+                    sprintf(fakeID, "%u-faded000%.08x%.08x", lastGen, arc4random(), arc4random());
+                    if (nWritten++ > 0)
+                        historyStream << ',';
+                    historyStream << fakeID;
+                }
+            }
+            if (nWritten++ > 0)
+                historyStream << ',';
+            historyStream << fleeceapi::asstring(revID);
+            if (ancestors.find(revID) != ancestors.end())
+                break;
+        }
+        return historyStream.str();
     }
 
 
@@ -821,7 +840,7 @@ namespace litecore { namespace repl {
                     if (rev->onInserted)
                         rev->onInserted(docErr);
                     rev = nullptr;
-                } else if (hasConflict(doc)) {
+                } else if (doc->selectedRev.flags & kRevIsConflict) {
                     // Note that rev was inserted but caused a conflict:
                     log("Created conflict with '%.*s' #%.*s",
                         SPLAT(rev->docID), SPLAT(rev->revID));
@@ -848,6 +867,16 @@ namespace litecore { namespace repl {
             double t = st.elapsed();
             log("Inserted %zu revs in %.2fms (%.0f/sec)", revs->size(), t*1000, revs->size()/t);
         }
+    }
+
+
+    Worker::ActivityLevel DBWorker::computeActivityLevel() const {
+        ActivityLevel level = Worker::computeActivityLevel();
+        if (SyncBusyLog.effectiveLevel() <= LogLevel::Info) {
+            log("activityLevel=%-s: pendingResponseCount=%d, eventCount=%d",
+                kC4ReplicatorActivityLevelNames[level], pendingResponseCount(), eventCount());
+        }
+        return level;
     }
 
 } }

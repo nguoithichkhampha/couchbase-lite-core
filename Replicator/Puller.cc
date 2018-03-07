@@ -38,6 +38,7 @@ namespace litecore { namespace repl {
         registerHandler("changes",          &Puller::handleChanges);
         registerHandler("proposeChanges",   &Puller::handleChanges);
         registerHandler("rev",              &Puller::handleRev);
+        registerHandler("norev",            &Puller::handleNoRev);
         _spareIncomingRevs.reserve(kMaxActiveIncomingRevs);
         _skipDeleted = _options.skipDeleted();
         if (nonPassive() && options.noIncomingConflicts())
@@ -93,13 +94,13 @@ namespace litecore { namespace repl {
             enc.endDict();
         }
         
-        sendRequest(msg, asynchronize([=](blip::MessageProgress progress) {
+        sendRequest(msg, [=](blip::MessageProgress progress) {
             //... After request is sent:
             if (progress.reply && progress.reply->isError()) {
                 gotError(progress.reply);
                 _fatalError = true;
             }
-        }));
+        });
     }
 
 
@@ -108,8 +109,8 @@ namespace litecore { namespace repl {
 
     // Receiving an incoming "changes" (or "proposeChanges") message
     void Puller::handleChanges(Retained<MessageIn> req) {
-        logVerbose("Received '%.*s' message %p (%u pending revs)",
-                   SPLAT(req->property("Profile"_sl)), req.get(), _pendingRevMessages);
+        logVerbose("Received '%.*s' REQ#%llu (%u pending revs)",
+                   SPLAT(req->property("Profile"_sl)), req->number(), _pendingRevMessages);
         _waitingChangesMessages.push_back(move(req));
         handleMoreChanges();
     }
@@ -130,7 +131,7 @@ namespace litecore { namespace repl {
     void Puller::handleChangesNow(Retained<MessageIn> req) {
         slice reqType = req->property("Profile"_sl);
         bool proposed = (reqType == "proposeChanges"_sl);
-        logVerbose("Handling '%.*s' message %p", SPLAT(reqType), req.get());
+        logVerbose("Handling '%.*s' message REQ#%llu", SPLAT(reqType), req->number());
 
         auto changes = req->JSONBody().asArray();
         if (!changes && req->body() != "null"_sl) {
@@ -178,7 +179,7 @@ namespace litecore { namespace repl {
                     }
                 }
                 if (nonPassive()) {
-                    log/*Verbose*/("Now waiting for %u 'rev' messages; %zu known sequences pending",
+                    logVerbose("Now waiting for %u 'rev' messages; %zu known sequences pending",
                                _pendingRevMessages, _missingSequences.size());
                 }
                 handleMoreChanges();  // because _waitingForChangesCallback changed
@@ -195,9 +196,19 @@ namespace litecore { namespace repl {
         if (_activeIncomingRevs < kMaxActiveIncomingRevs) {
             startIncomingRev(msg);
         } else {
-            log("Delaying handling 'rev' message for '%.*s' [%zu waiting]",
-                SPLAT(msg->property("id"_sl)), _waitingRevMessages.size()+1);//TEMP
+            logVerbose("Delaying handling 'rev' message for '%.*s' [%zu waiting]",
+                       SPLAT(msg->property("id"_sl)), _waitingRevMessages.size()+1);//TEMP
             _waitingRevMessages.push_back(move(msg));
+        }
+    }
+
+
+    void Puller::handleNoRev(Retained<MessageIn> msg) {
+        decrement(_pendingRevMessages);
+        handleMoreChanges();
+        if (!msg->noReply()) {
+            MessageBuilder response(msg);
+            msg->respond(response);
         }
     }
 
@@ -276,23 +287,28 @@ namespace litecore { namespace repl {
 
     
     Worker::ActivityLevel Puller::computeActivityLevel() const {
-        logDebug("Puller activity: level=%d, _caughtUp=%d, _waitingForChangesCallback=%d, _pendingRevMessages=%u, _activeIncomingRevs=%u",
-                 Worker::computeActivityLevel(), _caughtUp, _waitingForChangesCallback,
-                 _pendingRevMessages, _activeIncomingRevs);
+        ActivityLevel level;
         if (_fatalError) {
-            return kC4Stopped;
+            level = kC4Stopped;
         } else if (Worker::computeActivityLevel() == kC4Busy
                 || (!_caughtUp && nonPassive())
                 || _waitingForChangesCallback
                 || _pendingRevMessages > 0
                 || _activeIncomingRevs > 0) {
-            return kC4Busy;
+            level = kC4Busy;
         } else if (_options.pull == kC4Continuous || isOpenServer()) {
             const_cast<Puller*>(this)->_spareIncomingRevs.clear();
-            return kC4Idle;
+            level = kC4Idle;
         } else {
-            return kC4Stopped;
+            level = kC4Stopped;
         }
+        if (SyncBusyLog.effectiveLevel() <= LogLevel::Info) {
+            log("activityLevel=%-s: pendingResponseCount=%d, _caughtUp=%d, _waitingForChangesCallback=%d, _pendingRevMessages=%u, _activeIncomingRevs=%u",
+                kC4ReplicatorActivityLevelNames[level],
+                pendingResponseCount(), _caughtUp, _waitingForChangesCallback,
+                _pendingRevMessages, _activeIncomingRevs);
+        }
+        return level;
     }
 
 
