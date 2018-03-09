@@ -169,6 +169,10 @@ add_subdirectory(vendor/sqlite3-unicodesn   EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/BLIP-Cpp            EXCLUDE_FROM_ALL)
 add_subdirectory(vendor/sqlcipher           EXCLUDE_FROM_ALL)
 
+if(APPLE)
+    add_subdirectory(vendor/BLIP-Cpp/vendor/zlib           EXCLUDE_FROM_ALL)
+endif()
+
 ### MORE BUILD SETTINGS:
 
 # Mac/iOS stuff
@@ -389,13 +393,10 @@ add_library(Support STATIC
 
 ### Copy all static libraries into one folder
 
-if (NOT STATIC_OUTPUT_DIR)
-    set(STATIC_OUTPUT_DIR  ${EXECUTABLE_OUTPUT_PATH})
-endif()
-
 message(STATUS "STATIC_OUTPUT_DIR=           ${STATIC_OUTPUT_DIR}")
 
-add_custom_command(TARGET LiteCoreStatic
+if(STATIC_OUTPUT_DIR)
+    add_custom_command(TARGET LiteCoreStatic
               POST_BUILD
               COMMAND ${CMAKE_COMMAND} -E make_directory ${STATIC_OUTPUT_DIR}
               COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:LiteCoreStatic> ${STATIC_OUTPUT_DIR}
@@ -406,8 +407,9 @@ add_custom_command(TARGET LiteCoreStatic
               COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mbedcrypto> ${STATIC_OUTPUT_DIR}
               COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:BLIPStatic> ${STATIC_OUTPUT_DIR}
               COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:zlibstatic> ${STATIC_OUTPUT_DIR}
-			  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:sqlcipher> ${STATIC_OUTPUT_DIR}
-)
+              COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:sqlcipher> ${STATIC_OUTPUT_DIR}
+    )
+endif()
 
 ### TOOLS:
 
